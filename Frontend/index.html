@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BESCOM AI · NLP Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    /* Palette derived from the BESCOM logo blue (#0092E6). */
+    --p-50:#F2F9FE; --p-100:#E1F1FC; --p-200:#BEE0F8; --p-300:#8CC8F1;
+    --p-400:#4FA9E8; --p-500:#1E8FDE; --p-600:#0F76C4; --p-700:#0A5E9E;
+    --p-800:#0B4776; --p-900:#0A2E4C;
+    --ink:#0F1B26; --ink-1:#0F1B26; --ink-2:#42566B; --ink-3:#7089A0; --line:#DBEAF6;
+    --bg:#F7FAFD; --surface:#FFFFFF; --hover:#E1F1FC;
+    --teal:#0F766E; --teal-bg:#D6F0EC;
+    --amber:#9A6700; --amber-bg:#FBF0DE;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5;
+    overflow: hidden;
+  }
+  .mono { font-family: 'JetBrains Mono', Menlo, monospace; }
+
+  /* ============== APP LAYOUT ============== */
+  .app { display: grid; grid-template-columns: 260px 1fr; height: 100vh; height: 100dvh; }
+
+  /* ============== SIDEBAR ============== */
+  .sidebar {
+    background: linear-gradient(180deg, var(--p-900) 0%, var(--p-800) 100%);
+    color: white; display: flex; flex-direction: column;
+    border-right: 1px solid var(--p-900); overflow-y: auto;
+  }
+  .brand {
+    padding: 18px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .brand-logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: #fff; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; color: white;
+  }
+  .brand-logo img { width: 100%; height: 100%; object-fit: contain; }
+  .brand-name { font-weight: 600; font-size: 15px; }
+  .brand-sub { font-size: 10.5px; color: rgba(255,255,255,0.6); }
+
+  .nav-section { padding: 14px 12px 6px; font-size: 10.5px; text-transform: uppercase;
+    letter-spacing: 1px; color: rgba(255,255,255,0.5); font-weight: 600; }
+  .nav-item {
+    padding: 8px 12px; margin: 1px 8px; border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13.5px; color: rgba(255,255,255,0.88); transition: background .15s;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.08); }
+  .nav-item.active { background: rgba(140,200,241,0.20); color: white; }
+  .nav-item .icon { width: 16px; height: 16px; opacity: 0.85; flex-shrink: 0; }
+
+  .sidebar-foot {
+    margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .user-chip {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    border-radius: 8px; background: rgba(255,255,255,0.06);
+  }
+  .avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #4FA9E8, #0A5E9E);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 11.5px; color: white;
+  }
+  .user-name { color: white; font-size: 12.5px; font-weight: 600; }
+  .user-role { font-size: 11px; color: rgba(255,255,255,0.5); }
+
+  /* ============== MAIN AREA ============== */
+  .main { display: flex; flex-direction: column; min-width: 0; height: 100vh; min-height: 0; overflow: hidden; }
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    padding: 14px 24px; display: flex; align-items: center; gap: 16px;
+  }
+  .topbar .date-pill { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+  .topbar .actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .lang-tabs { display: flex; gap: 2px; background: var(--p-50); border-radius: 8px; padding: 2px; }
+  .lang-tab { border: 0; background: transparent; font: inherit; font-size: 11px; font-weight: 600;
+    color: var(--ink-3); padding: 4px 9px; border-radius: 6px; cursor: pointer; }
+  .lang-tab.active { background: var(--surface); color: var(--p-700); box-shadow: 0 1px 2px rgba(10,46,76,.12); }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 8px; background: transparent;
+    border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--ink-2); transition: all .15s;
+  }
+  .icon-btn:hover { background: var(--p-50); color: var(--p-700); border-color: var(--p-200); }
+
+  /* ============== CHAT / CONTENT AREA ============== */
+  .chat-area {
+    flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; padding: 0;
+    min-height: 0;
+    background: linear-gradient(180deg, var(--bg) 0%, var(--p-50) 100%);
+  }
+  .chat-inner { max-width: 920px; margin: 0 auto; padding: 32px 24px 200px; }
+
+  /* HERO */
+  .hero { text-align: center; padding: 32px 0 24px; }
+  .hero h1 {
+    font-size: 30px; font-weight: 700; margin: 0 0 8px;
+    background: linear-gradient(135deg, var(--p-800), var(--p-500));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* BESCOM summary (backend-driven) */
+  .bescom-summary { margin-top: 6px; }
+  .bescom-loading { font-size: 14px; color: var(--ink-3); }
+  .bescom-intro {
+    font-size: 14.5px; color: var(--ink-2); line-height: 1.55;
+    max-width: 620px; margin: 0 auto 22px;
+  }
+  .bescom-intro b { color: var(--p-700); font-weight: 600; }
+  .bescom-metrics {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; overflow: hidden;
+    box-shadow: 0 4px 20px rgba(10,46,76,0.06);
+  }
+  .bescom-metric { padding: 18px 14px; text-align: center; border-right: 1px solid var(--line); }
+  .bescom-metric:last-child { border-right: none; }
+  .bescom-metric .m-value { font-size: 22px; font-weight: 700; color: var(--p-700); line-height: 1.1; }
+  .bescom-metric .m-label {
+    font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase;
+    color: var(--ink-3); margin-top: 6px; font-weight: 600;
+  }
+
+  /* PROMPTS */
+  .prompts-section { margin: 26px 0 12px; }
+  .prompts-title { font-size: 12px; font-weight: 600; color: var(--ink-3);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .prompt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  @media (max-width: 720px) { .prompt-grid { grid-template-columns: 1fr; } }
+  .prompt {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; cursor: pointer; transition: all .15s;
+    display: flex; align-items: center; gap: 10px; text-align: left;
+  }
+  .prompt:hover { border-color: var(--p-300); background: var(--p-50); }
+  .prompt .ic { font-size: 16px; flex-shrink: 0; opacity: 0.7; }
+  .prompt-text { font-size: 13.5px; color: var(--ink); }
+
+  /* ============== COMPOSER ============== */
+  .composer-wrap {
+    position: fixed; bottom: 0; left: 260px; right: 0;
+    padding: 16px 24px 20px; background: linear-gradient(180deg, transparent 0%, var(--p-50) 30%);
+  }
+  @media (max-width: 880px) { .composer-wrap { left: 0; } }
+  .composer-inner { max-width: 920px; margin: 0 auto; }
+  .composer {
+    background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(10,46,76,0.08);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .composer:focus-within { border-color: var(--p-400); box-shadow: 0 4px 24px rgba(15,118,196,0.18); }
+  .composer-input {
+    border: 0; outline: 0; width: 100%; padding: 14px 18px;
+    background: transparent; font-family: inherit; font-size: 14.5px;
+    resize: none; color: var(--ink); min-height: 50px; max-height: 160px;
+  }
+  .composer-bar {
+    padding: 8px 12px 10px; display: flex; gap: 6px; align-items: center;
+    border-top: 1px solid var(--p-50);
+  }
+  .send-btn {
+    margin-left: auto;
+    background: linear-gradient(135deg, var(--p-600), var(--p-700));
+    color: white; border: 0; padding: 8px 16px; border-radius: 9px;
+    font-weight: 600; font-size: 13px; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(15,118,196,0.3); transition: all .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,118,196,0.4); }
+  .composer-hint { text-align: center; font-size: 10.5px; color: var(--ink-3); margin-top: 8px; }
+  .composer-hint .kbd {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
+    padding: 1px 5px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-2);
+  }
+
+  /* ============== CHAT MESSAGES ============== */
+  .messages { margin-top: 8px; display: flex; flex-direction: column; gap: 16px; }
+  .msg { display: flex; gap: 10px; }
+  .msg-avatar {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 12px; color: #fff;
+  }
+  .msg.user .msg-avatar { background: linear-gradient(135deg,#4FA9E8,#0A5E9E); }
+  .msg.bot  .msg-avatar { background: linear-gradient(135deg,#0A5E9E,#0A2E4C); }
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-role { font-size: 11px; font-weight: 600; color: var(--ink-3);
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .msg-text { font-size: 14.5px; color: var(--ink); line-height: 1.6; }
+  /* User question: full-width deep-blue gradient bar with white text. */
+  .msg.user .msg-body { }
+  .msg.user .msg-text {
+    background: linear-gradient(135deg, var(--p-700), var(--p-900));
+    color: #fff; border: 1px solid var(--p-900);
+    border-radius: 12px; padding: 12px 16px; display: block;
+    box-shadow: 0 2px 10px rgba(10,46,76,0.30);
+  }
+  /* ===== Two-layer bot reply =====
+     Outer layer: the whole bot reply sits in one big white card. */
+  .msg.bot .msg-content {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 16px; padding: 16px 18px;
+    box-shadow: 0 4px 20px rgba(10,46,76,0.06);
+  }
+  /* Answer text: plain, directly on the outer card (no inner box). */
+  .msg.bot .msg-text { color: var(--ink-1); }
+  .msg.bot .msg-text strong { color: var(--p-700); font-weight: 700; }
+  .msg-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px;
+    border-radius: 5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+  .badge-clarify { background: var(--amber-bg); color: var(--amber); }
+  .badge-refuse  { background: #FDE7E7; color: #B42318; }
+  .badge-error   { background: #FDE7E7; color: #B42318; }
+
+  /* ===== Analytics / charts (inner section card on the outer white card) ===== */
+  .analytics { margin-top: 14px; }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+    padding: 14px 16px 12px; box-shadow: 0 2px 10px rgba(10,46,76,0.05);
+  }
+  .chart-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .chart-dot { width: 8px; height: 8px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--p-500), var(--p-700)); flex-shrink: 0; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--ink-1); }
+  .chart-toggle { margin-left: auto; display: flex; gap: 3px; background: var(--p-50);
+    padding: 3px; border-radius: 8px; }
+  .ctb { border: 0; background: transparent; font: inherit; font-size: 11.5px; font-weight: 600;
+    color: var(--ink-3); padding: 4px 11px; border-radius: 6px; cursor: pointer; transition: all .15s; }
+  .ctb:hover { color: var(--p-700); }
+  .ctb.on { background: var(--surface); color: var(--p-700); box-shadow: 0 1px 2px rgba(10,46,76,.12); }
+  .chart-wrap { position: relative; height: 260px; }
+
+  /* Summary card (single-row result) */
+  .record-card { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px;
+    overflow: hidden; background: var(--surface); }
+  .record-card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .record-card th { text-align: left; padding: 9px 14px; background: var(--p-50);
+    color: var(--p-700); font-weight: 600; width: 42%; border-bottom: 1px solid var(--p-50); }
+  .record-card td { padding: 9px 14px; color: var(--ink-1); border-bottom: 1px solid var(--p-50);
+    font-family: 'JetBrains Mono', monospace; }
+
+  /* Follow-up "NEXT STEP" card (clickable) */
+  .next-step {
+    margin-top: 14px; padding: 12px 16px; border-left: 3px solid var(--p-500);
+    background: linear-gradient(135deg, var(--p-50) 0%, var(--p-100) 100%);
+    border-radius: 0 10px 10px 0; cursor: pointer; transition: background .15s;
+  }
+  .next-step:hover { background: linear-gradient(135deg, var(--p-100) 0%, var(--p-200) 100%); }
+  .next-step-label { font-size: 10.5px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--p-700); margin-bottom: 4px; }
+  .next-step-text { font-size: 13.5px; font-style: italic; color: var(--ink-1); }
+
+  /* Sources line */
+  .ans-sources { display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    margin-top: 10px; font-size: 12px; color: var(--ink-3); }
+  .ans-sources .src-lbl { font-weight: 500; }
+  .ans-sources .src-chip { font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    color: var(--p-700); background: var(--p-50); padding: 2px 8px; border-radius: 5px; }
+
+  /* Answer meta line: time · N results · Xms */
+  .ans-meta { font-size: 11px; color: var(--ink-3); margin-top: 8px; }
+
+  /* Result table (inner section card) */
+  .result-table-wrap { margin-top: 14px; overflow-x: auto; border: 1px solid var(--line);
+    border-radius: 12px; background: var(--surface); box-shadow: 0 2px 10px rgba(10,46,76,0.05); }
+  table.result-table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  table.result-table th { background: var(--p-50); color: var(--p-700); font-weight: 600;
+    text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line);
+    white-space: nowrap; position: sticky; top: 0; }
+  table.result-table td { padding: 7px 12px; border-bottom: 1px solid var(--p-50);
+    white-space: nowrap; }
+  table.result-table tr:last-child td { border-bottom: 0; }
+  table.result-table th.num { text-align: right; }
+  table.result-table td.num { text-align: right; font-family: 'JetBrains Mono', monospace; }
+  .result-meta { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
+  /* ===== "Generate SQL Query" button + collapsible panel ===== */
+  .sql-wrap { margin-top: 14px; }
+  .sql-toggle-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 9px;
+    padding: 8px 14px; font: inherit; font-size: 12.5px; font-weight: 600;
+    color: var(--p-700); cursor: pointer; transition: all .15s;
+  }
+  .sql-toggle-btn:hover { background: var(--p-50); border-color: var(--p-200); }
+  .sql-toggle-btn svg { width: 15px; height: 15px; }
+  .sql-panel { display: none; margin-top: 8px; border: 1px solid var(--p-800);
+    border-radius: 10px; overflow: hidden; background: var(--p-900); }
+  .sql-panel.open { display: block; }
+  .sql-panel-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: rgba(255,255,255,0.05);
+    font-size: 11px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase;
+    color: rgba(255,255,255,0.65); border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .sql-copy-btn {
+    background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; font: inherit; font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 6px; cursor: pointer; transition: background .15s;
+    text-transform: none; letter-spacing: 0;
+  }
+  .sql-copy-btn:hover { background: rgba(255,255,255,0.20); }
+  .sql-code { margin: 0; padding: 12px 14px; color: #BEE0F8;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55;
+    overflow-x: auto; white-space: pre; }
+  .typing { display: inline-flex; gap: 4px; padding: 4px 0; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--p-300);
+    animation: bounce 1.2s infinite ease-in-out; }
+  .typing span:nth-child(2){ animation-delay: .15s; } .typing span:nth-child(3){ animation-delay:.3s; }
+  @keyframes bounce { 0%,80%,100%{ transform: scale(.6); opacity:.5;} 40%{ transform: scale(1); opacity:1;} }
+
+  /* Scrollbar */
+  .chat-area::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 8px; }
+  .chat-area::-webkit-scrollbar-thumb { background: var(--p-200); border-radius: 4px; }
+  .chat-area::-webkit-scrollbar-thumb:hover { background: var(--p-300); }
+
+  @media (max-width: 880px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .bescom-metrics { grid-template-columns: 1fr 1fr; }
+    .bescom-metric:nth-child(2n) { border-right: none; }
+    .bescom-metric:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .chat-inner { padding: 20px 14px 190px; }
+    .hero h1 { font-size: 23px; }
+    .composer-wrap { left: 0; padding: 12px 14px; }
+    .composer-hint { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- ============== SIDEBAR ============== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">
+        <img src="BESCOM-logo.png" alt="BESCOM logo" />
+      </div>
+      <div>
+        <div class="brand-name">BESCOM</div>
+        <div class="brand-sub">NLP Dashboard</div>
+      </div>
+    </div>
+
+    <div class="nav-section">Conversations</div>
+    <div class="nav-item" id="newChatBtn">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
+      New chat
+    </div>
+    <div class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      Recent
+    </div>
+
+    <div class="nav-section">Resources</div>
+    <div class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"></path></svg>
+      Glossary
+    </div>
+    <div class="nav-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+      Use cases
+    </div>
+
+    <div class="sidebar-foot">
+      <div class="user-chip">
+        <div class="avatar">TA</div>
+        <div style="flex:1; min-width: 0;">
+          <div class="user-name">Test Account</div>
+          <div class="user-role">State Administrator</div>
+        </div>
+        <svg title="Sign out" style="cursor:pointer; opacity:0.6;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============== MAIN ============== -->
+  <main class="main">
+    <div class="topbar">
+      <div class="date-pill" id="datePill">Fri, 10 Jul 2026</div>
+      <div class="actions">
+        <div class="lang-tabs">
+          <button class="lang-tab active" data-lang="en">EN</button>
+          <button class="lang-tab" data-lang="kn">ಕನ್ನಡ</button>
+        </div>
+        <button class="icon-btn" title="History">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="chat-area">
+      <div class="chat-inner">
+        <!-- HERO -->
+        <div class="hero" id="heroBlock">
+          <h1>What would you like to know?</h1>
+          <div id="bescom-summary" class="bescom-summary" aria-live="polite">
+            <div class="bescom-loading">Loading BESCOM data…</div>
+          </div>
+        </div>
+
+        <!-- PROMPTS -->
+        <div class="prompts-section" id="promptsSection">
+          <div class="prompts-title">Try a question</div>
+          <div class="prompt-grid">
+            <div class="prompt"><span class="ic">🔌</span><span class="prompt-text">How many active installations are there in each zone?</span></div>
+            <div class="prompt"><span class="ic">📍</span><span class="prompt-text">What is the total net consumption in Bangalore West Circle?</span></div>
+            <div class="prompt"><span class="ic">💰</span><span class="prompt-text">Which circle has the highest net collection?</span></div>
+            <div class="prompt"><span class="ic">⚡</span><span class="prompt-text">Compare metered and unmetered installations across zones</span></div>
+          </div>
+        </div>
+
+        <!-- MESSAGES -->
+        <div class="messages" id="messages"></div>
+      </div>
+    </div>
+
+    <!-- COMPOSER -->
+    <div class="composer-wrap">
+      <div class="composer-inner">
+        <div class="composer">
+          <textarea class="composer-input" id="queryInput" rows="1" placeholder="Ask anything about your BESCOM electricity data…"></textarea>
+          <div class="composer-bar">
+            <button class="send-btn" id="sendBtn">
+              Send
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+        </div>
+        <div class="composer-hint">
+          Press <span class="kbd">↵</span> to send · <span class="kbd">⇧</span>+<span class="kbd">↵</span> for new line
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  /* ---- Date pill ---- */
+  (function setDate() {
+    var d = new Date();
+    var opts = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+    var el = document.getElementById('datePill');
+    if (el) el.textContent = d.toLocaleDateString('en-GB', opts);
+  })();
+
+  /* ---- Language tabs ---- */
+  document.querySelectorAll('.lang-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.lang-tab').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+  });
+
+  /* ---- API base (served from same origin by FastAPI) ---- */
+  var API = '';   // same origin, e.g. http://127.0.0.1:8000
+
+  /* ---- Composer ---- */
+  var inp = document.getElementById('queryInput');
+  var messagesEl = document.getElementById('messages');
+  var chatArea = document.querySelector('.chat-area');
+  var busy = false;
+  // Every question asked + every follow-up shown this session. Sent to the
+  // backend so it never suggests a follow-up we've already used. Reset on New chat.
+  var asked = [];
+  // The last few answered turns (question + SQL + a sample of rows). Sent with
+  // each request so a follow-up like "which division within that circle?" can
+  // resolve "that circle" against what we just answered. Reset on New chat.
+  var turns = [];
+
+  inp.addEventListener('input', function () {
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
+  });
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function scrollDown() { chatArea.scrollTop = chatArea.scrollHeight; }
+  function nowTime() { return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }); }
+
+  function addUserMsg(text) {
+    var el = document.createElement('div');
+    el.className = 'msg user';
+    el.innerHTML =
+      '<div class="msg-avatar">TA</div>' +
+      '<div class="msg-body"><div class="msg-role">You</div>' +
+      '<div class="msg-text">' + esc(text) + '</div></div>';
+    messagesEl.appendChild(el);
+    scrollDown();
+  }
+
+  function addBotShell() {
+    var el = document.createElement('div');
+    el.className = 'msg bot';
+    el.innerHTML =
+      '<div class="msg-avatar">AI</div>' +
+      '<div class="msg-body"><div class="msg-role">BESCOM AI</div>' +
+      '<div class="msg-content"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+    messagesEl.appendChild(el);
+    scrollDown();
+    return el.querySelector('.msg-content');
+  }
+
+  function isNum(v) { return typeof v === 'number' || (v !== '' && v != null && !isNaN(v) && typeof v !== 'boolean'); }
+
+  // Format a number cleanly: whole numbers get NO decimals; genuine fractions
+  // keep at most 2. Avoids ugly tails like "67,12,80,410.675".
+  function fmtNum(v) {
+    var n = Number(v);
+    if (Number.isInteger(n)) return n.toLocaleString('en-IN');
+    // Round to 2 dp; if that rounds to a whole number, show it without decimals.
+    var r = Math.round(n * 100) / 100;
+    if (Number.isInteger(r)) return r.toLocaleString('en-IN');
+    return r.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  }
+
+  function renderTable(cols, rows) {
+    if (!cols || !cols.length || !rows || !rows.length) return '';
+    // A column is numeric only if every value in it is a number. Its header AND
+    // its cells are then right-aligned together, so they line up (no mismatch).
+    var numCol = {};
+    cols.forEach(function (c) {
+      numCol[c] = rows.every(function (r) { return isNum(r[c]); });
+    });
+    var thead = '<tr>' + cols.map(function (c) {
+      return '<th' + (numCol[c] ? ' class="num"' : '') + '>' + esc(c) + '</th>';
+    }).join('') + '</tr>';
+    var body = rows.slice(0, 100).map(function (r) {
+      return '<tr>' + cols.map(function (c) {
+        var v = r[c];
+        var cls = numCol[c] ? ' class="num"' : '';
+        var disp = numCol[c] ? fmtNum(v) : esc(v);
+        return '<td' + cls + '>' + disp + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    return '<div class="result-table-wrap"><table class="result-table"><thead>' +
+      thead + '</thead><tbody>' + body + '</tbody></table></div>';
+  }
+
+  /* ===== Analytics engine (chart type is decided here, in the frontend) ===== */
+  var PAL = ['#0A5E9E','#0F76C4','#1E8FDE','#4FA9E8','#8CC8F1','#BEE0F8','#0F766E','#5EC8BC'];
+  var TOOLTIP = {
+    backgroundColor:'rgba(10,46,76,.96)', titleColor:'#E1F1FC', bodyColor:'rgba(225,241,252,.9)',
+    padding:12, cornerRadius:6, borderColor:'rgba(255,255,255,.12)', borderWidth:1,
+    callbacks:{ label: function(ctx){ return '  ' + Number(ctx.raw).toLocaleString('en-IN'); } }
+  };
+  var AXIS_OPT = {
+    responsive:true, maintainAspectRatio:false,
+    animation:{ duration:600, easing:'easeOutQuart' },
+    plugins:{ legend:{ display:false }, tooltip: TOOLTIP },
+    scales:{
+      x:{ grid:{ color:'rgba(15,118,196,.06)' }, ticks:{ color:'#7089A0', font:{size:11} }, border:{display:false} },
+      y:{ grid:{ color:'rgba(15,118,196,.06)' }, ticks:{ color:'#7089A0', font:{size:11} }, border:{display:false} }
+    }
+  };
+  var PIE_OPT = {
+    responsive:true, maintainAspectRatio:false,
+    animation:{ duration:600, easing:'easeOutQuart' },
+    plugins:{ legend:{ position:'right', labels:{ color:'#0F1B26', usePointStyle:true, pointStyle:'circle', padding:14, font:{size:12} } }, tooltip: TOOLTIP }
+  };
+
+  var CHARTS = {};   // canvas id -> Chart instance
+  var CDATA = {};    // canvas id -> { labels, values }
+  var chartSeq = 0;
+
+  function drawChart(cid, type) {
+    var qd = CDATA[cid]; if (!qd) return;
+    var cv = document.getElementById(cid); if (!cv) return;
+    if (CHARTS[cid]) { try { CHARTS[cid].destroy(); } catch(e){} }
+    if (type === 'doughnut') {
+      CHARTS[cid] = new Chart(cv, { type:'doughnut',
+        data:{ labels: qd.labels, datasets:[{ data: qd.values, backgroundColor: PAL, borderWidth:2, borderColor:'#fff', cutout:'62%' }] },
+        options: PIE_OPT });
+    } else if (type === 'line') {
+      CHARTS[cid] = new Chart(cv, { type:'line',
+        data:{ labels: qd.labels, datasets:[{ data: qd.values, borderColor:'#0A5E9E', borderWidth:2.5,
+          backgroundColor:'rgba(10,94,158,.10)', tension:.4, fill:true, pointRadius:4,
+          pointBackgroundColor:'#fff', pointBorderColor:'#0A5E9E', pointBorderWidth:2 }] },
+        options: AXIS_OPT });
+    } else {
+      CHARTS[cid] = new Chart(cv, { type:'bar',
+        data:{ labels: qd.labels, datasets:[{ data: qd.values, borderRadius:5, borderWidth:0,
+          backgroundColor: function(ctx){ var g = ctx.chart.ctx.createLinearGradient(0,0,0,220);
+            g.addColorStop(0,'#0A5E9E'); g.addColorStop(1,'#1E8FDE'); return g; } }] },
+        options: AXIS_OPT });
+    }
+  }
+  // Toggle chart type on button click — re-renders instantly, no re-query.
+  window.switchChart = function(cid, type, btn) {
+    var group = btn.parentNode.querySelectorAll('.ctb');
+    for (var i = 0; i < group.length; i++) group[i].classList.remove('on');
+    btn.classList.add('on');
+    drawChart(cid, type);
+  };
+
+  // Decide whether/what to chart from columns+rows, and return {html, init}.
+  function buildAnalytics(cols, rows) {
+    if (!rows || !rows.length) return { html: '', init: function(){} };
+
+    // Single row -> a clean summary card, no chart clutter.
+    if (rows.length === 1) {
+      var r0 = rows[0];
+      var entries = cols.filter(function(c){ return r0[c] !== null && r0[c] !== '' && String(r0[c]) !== 'None'; });
+      if (!entries.length) return { html: '', init: function(){} };
+      var body = entries.map(function(c){
+        var v = r0[c]; var disp = isNum(v) ? fmtNum(v) : esc(v);
+        return '<tr><th>' + esc(c.replace(/_/g,' ')) + '</th><td>' + disp + '</td></tr>';
+      }).join('');
+      return { html: '<div class="record-card"><table><tbody>' + body + '</tbody></table></div>',
+               init: function(){} };
+    }
+
+    // Multi-row: classify columns. Numeric = every row parses as a number.
+    var numCols = cols.filter(function(c){ return rows.every(function(r){
+      return r[c] !== null && r[c] !== '' && !isNaN(parseFloat(r[c])); }); });
+    var lblCols = cols.filter(function(c){ return numCols.indexOf(c) === -1; });
+    if (!numCols.length) return { html: '', init: function(){} };  // nothing to plot
+
+    var lc = lblCols[0] || cols[0];                 // x-axis (category) column
+    var vc = numCols[0];                            // first numeric measure
+    var isTime = /month|period|year|date|trend|day/i.test(lc);
+    var isFew = rows.length <= 6;
+    var defType = isTime ? 'line' : (isFew ? 'doughnut' : 'bar');   // frontend heuristic
+
+    chartSeq++;
+    var cid = 'chart_' + chartSeq;
+    var labels = rows.map(function(r){ var s = String(r[lc]); return s.length > 18 ? s.slice(0,16) + '…' : s; });
+    var values = rows.map(function(r){ return parseFloat(r[vc]) || 0; });
+
+    function tb(t, on){ return '<button class="ctb' + (defType===t?' on':'') + '" onclick="switchChart(\'' + cid + '\',\'' + t + '\',this)">' + on + '</button>'; }
+    var html =
+      '<div class="chart-card">' +
+        '<div class="chart-head">' +
+          '<span class="chart-dot"></span>' +
+          '<span class="chart-title">' + esc(vc.replace(/_/g,' ')) + ' by ' + esc(lc.replace(/_/g,' ')) + '</span>' +
+          '<span class="chart-toggle">' + tb('bar','Bar') + tb('doughnut','Donut') + tb('line','Line') + '</span>' +
+        '</div>' +
+        '<div class="chart-wrap"><canvas id="' + cid + '"></canvas></div>' +
+      '</div>';
+
+    return { html: html, init: function(){ CDATA[cid] = { labels: labels, values: values }; drawChart(cid, defType); } };
+  }
+
+  // Follow-up as a clickable "NEXT STEP" card (from backend follow_up).
+  function buildFollowUp(text) {
+    if (!text) return '';
+    return '<div class="next-step" onclick="askFollowUp(this)">' +
+      '<div class="next-step-label">Next step</div>' +
+      '<div class="next-step-text">' + esc(text) + '</div>' +
+      '</div>';
+  }
+  window.askFollowUp = function(card) {
+    var t = card.querySelector('.next-step-text');
+    inp.value = (t ? t.textContent : card.textContent).trim();
+    send();
+  };
+
+  // "Sources:" line — the table(s) + GROUP BY column parsed from the SQL.
+  function buildSources(sql) {
+    if (!sql) return '';
+    var chips = [];
+    var seen = {};
+    var re = /(?:from|join)\s+["']?([a-z0-9_.]+)["']?/gi, m;
+    while ((m = re.exec(sql)) !== null) {
+      var t = m[1].replace(/["']/g, '').split('.').pop().replace(/_/g, ' ');
+      if (t && !seen[t.toLowerCase()]) { seen[t.toLowerCase()] = 1; chips.push(t); }
+    }
+    var g = sql.match(/group\s+by\s+([a-z0-9_."]+)/i);
+    if (g) chips.push('GROUP BY ' + g[1].replace(/["']/g, '').split('.').pop());
+    if (!chips.length) return '';
+    return '<div class="ans-sources"><span class="src-lbl">Sources:</span>' +
+      chips.map(function (c) { return '<span class="src-chip">' + esc(c) + '</span>'; }).join('') +
+      '</div>';
+  }
+
+  // "Generate SQL Query" — a button that reveals the generated SQL with a Copy button.
+  var sqlSeq = 0;
+  function buildSqlBlock(sql) {
+    if (!sql || !String(sql).trim()) return '';
+    sqlSeq++;
+    var id = 'sql_' + sqlSeq;
+    return '<div class="sql-wrap">' +
+      '<button class="sql-toggle-btn" onclick="toggleSql(\'' + id + '\', this)">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>' +
+        '<span class="sql-toggle-label">Generate SQL Query</span>' +
+      '</button>' +
+      '<div class="sql-panel" id="' + id + '">' +
+        '<div class="sql-panel-head"><span>SQL Query</span>' +
+          '<button class="sql-copy-btn" onclick="copySql(\'' + id + '\', this)">Copy</button></div>' +
+        '<pre class="sql-code">' + esc(String(sql).trim()) + '</pre>' +
+      '</div>' +
+    '</div>';
+  }
+  window.toggleSql = function(id, btn) {
+    var panel = document.getElementById(id);
+    if (!panel) return;
+    var open = panel.classList.toggle('open');
+    var label = btn.querySelector('.sql-toggle-label');
+    if (label) label.textContent = open ? 'Hide SQL Query' : 'Generate SQL Query';
+  };
+  window.copySql = function(id, btn) {
+    var code = document.querySelector('#' + id + ' .sql-code');
+    if (!code) return;
+    var text = code.textContent;
+    var done = function () {
+      var o = btn.textContent; btn.textContent = 'Copied!';
+      setTimeout(function () { btn.textContent = o; }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { done(); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta); done();
+    }
+  };
+
+  function renderBot(content, data) {
+    var badge = '';
+    if (data.kind === 'clarify') badge = '<span class="msg-badge badge-clarify">Needs clarification</span><br>';
+    else if (data.kind === 'refuse') badge = '<span class="msg-badge badge-refuse">Can’t answer</span><br>';
+    else if (data.kind === 'error') badge = '<span class="msg-badge badge-error">Error</span><br>';
+
+    // Render **bold** as <strong> (escape first so it stays XSS-safe), and drop
+    // any stray leftover asterisks so the answer never shows raw markdown.
+    var answerHtml = esc(data.answer || '')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*/g, '');
+    var html = badge + '<div class="msg-text">' + answerHtml + '</div>';
+
+    var analytics = { html: '', init: function(){} };
+    var hasRows = data.rows && data.rows.length && (data.kind === 'table' || data.kind === 'scalar');
+
+    if (hasRows) {
+      analytics = buildAnalytics(data.columns, data.rows);
+      html += analytics.html;                       // chart / summary card first
+
+      if (data.rows.length > 1) {                    // then the data table (multi-row only)
+        html += renderTable(data.columns, data.rows);
+        var shown = Math.min(data.rows.length, 100);
+        html += '<div class="result-meta">Showing ' + shown +
+          (data.row_count > shown ? ' of ' + data.row_count : '') + ' row' +
+          (data.row_count === 1 ? '' : 's') + '</div>';
+      }
+
+      html += buildSqlBlock(data.sql);               // "Generate SQL Query" button + panel
+    }
+
+    html += buildFollowUp(data.follow_up);           // clickable "Next step" card
+
+    if (hasRows) {
+      html += buildSources(data.sql);                // "Sources:" chips from the SQL
+      // Meta line: time · N results · Xms  (like the reference site).
+      var parts = [nowTime()];
+      if (typeof data.row_count === 'number')
+        parts.push(data.row_count + ' result' + (data.row_count === 1 ? '' : 's'));
+      html += '<div class="ans-meta">' + parts.join(' · ') + '</div>';
+    }
+
+    content.innerHTML = html;
+    // Charts must init after the canvas is in the DOM.
+    requestAnimationFrame(function () {
+      try { analytics.init(); } catch (e) { console.error('Chart init failed:', e); }
+    });
+    scrollDown();
+  }
+
+  // Hide the whole welcome block (hero + metrics + prompt cards) on first question.
+  function hideWelcome() {
+    var hero = document.getElementById('heroBlock');
+    var prompts = document.getElementById('promptsSection');
+    if (hero) hero.style.display = 'none';
+    if (prompts) prompts.style.display = 'none';
+  }
+
+  // New chat: clear the conversation and bring the welcome block back.
+  function newChat() {
+    messagesEl.innerHTML = '';
+    asked = [];                              // fresh session -> follow-ups start over
+    turns = [];                              // and no stale context to refer back to
+    var hero = document.getElementById('heroBlock');
+    var prompts = document.getElementById('promptsSection');
+    if (hero) hero.style.display = '';
+    if (prompts) prompts.style.display = '';
+    inp.value = '';
+    inp.style.height = 'auto';
+    scrollDown();
+    inp.focus();
+  }
+  var newChatBtn = document.getElementById('newChatBtn');
+  if (newChatBtn) newChatBtn.addEventListener('click', newChat);
+
+  function send() {
+    var q = inp.value.trim();
+    if (!q || busy) return;
+    busy = true;
+    hideWelcome();
+
+    if (asked.indexOf(q) === -1) asked.push(q);   // remember this question
+
+    addUserMsg(q);
+    inp.value = '';
+    inp.style.height = 'auto';
+    var content = addBotShell();
+
+    fetch(API + '/api/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // asked -> never repeat a follow-up; turns -> resolve "that circle" etc.
+      body: JSON.stringify({ question: q, asked: asked, history: turns.slice(-2) })
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        var d = res.j || {};
+        if (!d.kind) d.kind = res.ok ? 'table' : 'error';
+        if (!d.answer) d.answer = d.error || 'No answer returned.';
+        // Record the suggested follow-up so the next call knows not to repeat it.
+        if (d.follow_up && asked.indexOf(d.follow_up) === -1) asked.push(d.follow_up);
+        // Remember this turn so the NEXT question can refer back to it. Only a
+        // turn that actually produced data can be a referent; keep 5 rows max so
+        // the prompt stays small.
+        if (d.sql && d.rows && d.rows.length) {
+          turns.push({ question: q, sql: d.sql, rows: d.rows.slice(0, 5) });
+          if (turns.length > 2) turns.shift();
+        }
+        renderBot(content, d);
+      })
+      .catch(function (e) {
+        renderBot(content, { kind: 'error', answer: 'Request failed: ' + e.message +
+          '. Is the backend running on this address?' });
+      })
+      .finally(function () { busy = false; });
+  }
+
+  inp.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  document.getElementById('sendBtn').addEventListener('click', send);
+
+  /* ---- Click a prompt -> fill composer ---- */
+  document.querySelectorAll('.prompt').forEach(function (p) {
+    p.addEventListener('click', function () {
+      inp.value = p.querySelector('.prompt-text').textContent.trim();
+      inp.style.height = 'auto';
+      inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
+      send();
+    });
+  });
+
+  /* ---- BESCOM backend data ---- */
+  // Fallback snapshot (used when opened via file:// where fetch is blocked).
+  // Source: Backend/bescom_summary.json (generated from BESCOM.xlsx).
+  var BESCOM_FALLBACK = {
+    "utility": "BESCOM", "records": 20000,
+    "zones": 4, "circles": 9, "divisions": 22,
+    "total_installations": 91132858, "active_installations": 88407331,
+    "metered_installations": 82007088,
+    "net_consumption_mu": 5150.9, "net_revenue_cr": 48174.7
+  };
+
+  function fmtIndian(n) {
+    var s = String(Math.round(n));
+    var last3 = s.slice(-3);
+    var rest = s.slice(0, -3);
+    if (rest) last3 = ',' + last3;
+    rest = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    return rest + last3;
+  }
+
+  function renderBescom(d) {
+    var el = document.getElementById('bescom-summary');
+    var metrics = [
+      { value: fmtIndian(d.total_installations), label: 'Installations' },
+      { value: fmtIndian(d.active_installations), label: 'Active' },
+      { value: d.net_consumption_mu.toLocaleString('en-IN') + ' MU', label: 'Net Consumption' },
+      { value: '₹' + d.net_revenue_cr.toLocaleString('en-IN') + ' Cr', label: 'Net Revenue' }
+    ];
+    var metricsHtml = metrics.map(function (m) {
+      return '<div class="bescom-metric"><div class="m-value">' + m.value +
+        '</div><div class="m-label">' + m.label + '</div></div>';
+    }).join('');
+
+    el.innerHTML =
+      '<p class="bescom-intro">Ask anything about <b>BESCOM</b> billing &amp; installation data in natural language ' +
+      'across the Bengaluru supply area — get answers as text, tables and charts.</p>' +
+      '<div class="bescom-metrics">' + metricsHtml + '</div>';
+  }
+
+  (function loadBescom() {
+    // Prefer the live backend (real numbers straight from Neon); fall back to
+    // the static snapshot / bundled fallback when the API isn't reachable.
+    fetch(API + '/api/summary')
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(renderBescom)
+      .catch(function () {
+        fetch('../Backend/bescom_summary.json')
+          .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+          .then(renderBescom)
+          .catch(function () { renderBescom(BESCOM_FALLBACK); });
+      });
+  })();
+</script>
+
+</body>
+</html>

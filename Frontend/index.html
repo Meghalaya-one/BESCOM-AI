@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BESCOM AI · NLP Dashboard</title>
+<title>BESCOM AI · RAPDRP / Non-RAPDRP NLP Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com/">
 <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -90,6 +90,9 @@
   .lang-tab { border: 0; background: transparent; font: inherit; font-size: 11px; font-weight: 600;
     color: var(--ink-3); padding: 4px 9px; border-radius: 6px; cursor: pointer; }
   .lang-tab.active { background: var(--surface); color: var(--p-700); box-shadow: 0 1px 2px rgba(10,46,76,.12); }
+  /* Auto-route hint in the topbar (dataset is chosen from the question). */
+  .ds-label { font-size: 10.5px; font-weight: 600; letter-spacing: .3px;
+    color: var(--ink-3); margin-right: 2px; }
   .icon-btn {
     width: 34px; height: 34px; border-radius: 8px; background: transparent;
     border: 1px solid var(--line); display: flex; align-items: center; justify-content: center;
@@ -106,13 +109,25 @@
   .chat-inner { max-width: 920px; margin: 0 auto; padding: 32px 24px 200px; }
 
   /* HERO */
-  .hero { text-align: center; padding: 32px 0 24px; }
+  .hero { text-align: center; padding: 40px 0 24px; animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 11px; font-weight: 600; letter-spacing: .6px; text-transform: uppercase;
+    color: var(--p-700); background: var(--p-100); border: 1px solid var(--p-200);
+    padding: 5px 13px; border-radius: 999px; margin-bottom: 16px;
+  }
+  .hero-eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--p-500);
+    box-shadow: 0 0 0 3px rgba(30,143,222,.18); animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:.4; } }
   .hero h1 {
-    font-size: 30px; font-weight: 700; margin: 0 0 8px;
-    background: linear-gradient(135deg, var(--p-800), var(--p-500));
+    font-size: 34px; font-weight: 700; margin: 0 0 10px; letter-spacing: -.5px;
+    background: linear-gradient(120deg, var(--p-900) 0%, var(--p-600) 55%, var(--p-400) 100%);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
   /* BESCOM summary (backend-driven) */
   .bescom-summary { margin-top: 6px; }
@@ -123,33 +138,65 @@
   }
   .bescom-intro b { color: var(--p-700); font-weight: 600; }
   .bescom-metrics {
-    display: grid; grid-template-columns: repeat(4, 1fr);
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    animation: rise .5s cubic-bezier(.2,.7,.3,1) .08s both;
+  }
+  .bescom-metric {
+    position: relative; padding: 18px 16px; text-align: left;
     background: var(--surface); border: 1px solid var(--line);
-    border-radius: 14px; overflow: hidden;
-    box-shadow: 0 4px 20px rgba(10,46,76,0.06);
+    border-radius: 14px; box-shadow: 0 4px 18px rgba(10,46,76,0.05);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    overflow: hidden;
   }
-  .bescom-metric { padding: 18px 14px; text-align: center; border-right: 1px solid var(--line); }
-  .bescom-metric:last-child { border-right: none; }
-  .bescom-metric .m-value { font-size: 22px; font-weight: 700; color: var(--p-700); line-height: 1.1; }
+  .bescom-metric::before {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
+    background: linear-gradient(180deg, var(--p-400), var(--p-700));
+  }
+  .bescom-metric:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 26px rgba(10,46,76,0.12);
+    border-color: var(--p-200);
+  }
+  .bescom-metric .m-top { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+  .bescom-metric .m-ic { font-size: 15px; line-height: 1; }
   .bescom-metric .m-label {
-    font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase;
-    color: var(--ink-3); margin-top: 6px; font-weight: 600;
+    font-size: 9.5px; letter-spacing: 0.6px; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 700;
   }
+  .bescom-metric .m-value { font-size: 24px; font-weight: 700; color: var(--p-800); line-height: 1.05; }
+  @media (max-width: 560px) { .bescom-metrics { grid-template-columns: 1fr 1fr; } }
 
   /* PROMPTS */
-  .prompts-section { margin: 26px 0 12px; }
-  .prompts-title { font-size: 12px; font-weight: 600; color: var(--ink-3);
-    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
-  .prompt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .prompts-section { margin: 30px 0 12px; animation: rise .5s cubic-bezier(.2,.7,.3,1) .16s both; }
+  .prompts-title { font-size: 12px; font-weight: 700; color: var(--ink-3);
+    text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px; }
+  .prompts-title::after { content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, var(--line), transparent); }
+  .prompt-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
   @media (max-width: 720px) { .prompt-grid { grid-template-columns: 1fr; } }
   .prompt {
-    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
-    padding: 12px 14px; cursor: pointer; transition: all .15s;
-    display: flex; align-items: center; gap: 10px; text-align: left;
+    position: relative; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 14px 16px; cursor: pointer;
+    transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    display: flex; align-items: center; gap: 12px; text-align: left;
   }
-  .prompt:hover { border-color: var(--p-300); background: var(--p-50); }
-  .prompt .ic { font-size: 16px; flex-shrink: 0; opacity: 0.7; }
-  .prompt-text { font-size: 13.5px; color: var(--ink); }
+  .prompt:hover {
+    border-color: var(--p-300); background: var(--p-50);
+    transform: translateY(-2px); box-shadow: 0 8px 20px rgba(10,46,76,0.08);
+  }
+  .prompt .ic {
+    font-size: 16px; flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--p-50); border: 1px solid var(--line); transition: all .16s;
+  }
+  .prompt:hover .ic { background: var(--p-100); border-color: var(--p-200); }
+  .prompt-text { font-size: 13.5px; color: var(--ink); font-weight: 500; line-height: 1.4; }
+  .prompt .arrow {
+    margin-left: auto; flex-shrink: 0; color: var(--p-400);
+    opacity: 0; transform: translateX(-4px); transition: all .16s;
+  }
+  .prompt:hover .arrow { opacity: 1; transform: none; }
 
   /* ============== COMPOSER ============== */
   .composer-wrap {
@@ -182,6 +229,29 @@
     display: flex; align-items: center; gap: 6px;
   }
   .send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,118,196,0.4); }
+  /* Voice input mic button (browser Web Speech API) */
+  .mic-btn {
+    width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
+    border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+    color: var(--p-700); display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+  }
+  .mic-btn:hover { border-color: var(--p-400); color: var(--p-600); background: var(--p-50); }
+  .mic-btn.listening {
+    background: linear-gradient(135deg, #e5484d, #c62828); border-color: #c62828; color: #fff;
+    animation: micPulse 1.3s ease-in-out infinite;
+  }
+  .mic-btn[hidden] { display: none; }
+  @keyframes micPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(229,72,77,.45); }
+    50%     { box-shadow: 0 0 0 7px rgba(229,72,77,0); }
+  }
+  .mic-status {
+    font-size: 11px; font-weight: 600; color: #c62828; margin-left: 2px;
+    display: none; align-items: center;
+  }
+  .mic-status.show { display: inline-flex; }
+
   .composer-hint { text-align: center; font-size: 10.5px; color: var(--ink-3); margin-top: 8px; }
   .composer-hint .kbd {
     background: var(--surface); border: 1px solid var(--line); border-radius: 4px;
@@ -222,6 +292,11 @@
   .msg.bot .msg-text strong { color: var(--p-700); font-weight: 700; }
   .msg-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px;
     border-radius: 5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+  /* "Routed to" dataset chip on each answer */
+  .ds-chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px;
+    border-radius: 5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px;
+    background: var(--p-100); color: var(--p-700); border: 1px solid var(--p-200); }
+  .ds-chip.combined { background: var(--teal-bg); color: var(--teal); border-color: var(--teal); }
   .badge-clarify { background: var(--amber-bg); color: var(--amber); }
   .badge-refuse  { background: #FDE7E7; color: #B42318; }
   .badge-error   { background: #FDE7E7; color: #B42318; }
@@ -287,6 +362,24 @@
   table.result-table th.num { text-align: right; }
   table.result-table td.num { text-align: right; font-family: 'JetBrains Mono', monospace; }
   .result-meta { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
+
+  /* ===== Table pagination ===== */
+  .pager {
+    display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .pager-info { font-size: 11.5px; color: var(--ink-3); font-weight: 500; }
+  .pager-ctrls { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+  .pager-btn {
+    min-width: 30px; height: 30px; padding: 0 9px; border-radius: 8px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+    font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; transition: all .14s;
+  }
+  .pager-btn:hover:not(:disabled) { background: var(--p-50); color: var(--p-700); border-color: var(--p-200); }
+  .pager-btn.on { background: var(--p-600); color: #fff; border-color: var(--p-600); }
+  .pager-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .pager-btn svg { width: 14px; height: 14px; }
+  .pager-gap { color: var(--ink-3); padding: 0 2px; font-size: 12px; }
   /* ===== "Generate SQL Query" button + collapsible panel ===== */
   .sql-wrap { margin-top: 14px; }
   .sql-toggle-btn {
@@ -331,8 +424,6 @@
     .app { grid-template-columns: 1fr; }
     .sidebar { display: none; }
     .bescom-metrics { grid-template-columns: 1fr 1fr; }
-    .bescom-metric:nth-child(2n) { border-right: none; }
-    .bescom-metric:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
     .chat-inner { padding: 20px 14px 190px; }
     .hero h1 { font-size: 23px; }
     .composer-wrap { left: 0; padding: 12px 14px; }
@@ -351,7 +442,7 @@
       </div>
       <div>
         <div class="brand-name">BESCOM</div>
-        <div class="brand-sub">NLP Dashboard</div>
+        <div class="brand-sub" id="brandSub">NLP Dashboard · RAPDRP + Non-RAPDRP</div>
       </div>
     </div>
 
@@ -406,9 +497,10 @@
       <div class="chat-inner">
         <!-- HERO -->
         <div class="hero" id="heroBlock">
+          <div class="hero-eyebrow"><span class="dot"></span>Live · RAPDRP + Non-RAPDRP</div>
           <h1>What would you like to know?</h1>
           <div id="bescom-summary" class="bescom-summary" aria-live="polite">
-            <div class="bescom-loading">Loading BESCOM data…</div>
+            <div class="bescom-loading">Loading data…</div>
           </div>
         </div>
 
@@ -416,10 +508,10 @@
         <div class="prompts-section" id="promptsSection">
           <div class="prompts-title">Try a question</div>
           <div class="prompt-grid">
-            <div class="prompt"><span class="ic">🔌</span><span class="prompt-text">How many active installations are there in each zone?</span></div>
-            <div class="prompt"><span class="ic">📍</span><span class="prompt-text">What is the total net consumption in Bangalore West Circle?</span></div>
-            <div class="prompt"><span class="ic">💰</span><span class="prompt-text">Which circle has the highest net collection?</span></div>
-            <div class="prompt"><span class="ic">⚡</span><span class="prompt-text">Compare metered and unmetered installations across zones</span></div>
+            <div class="prompt"><span class="ic">🔌</span><span class="prompt-text">What is the total number of active installations?</span><svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></div>
+            <div class="prompt"><span class="ic">💰</span><span class="prompt-text">Show collection efficiency by circle</span><svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></div>
+            <div class="prompt"><span class="ic">📊</span><span class="prompt-text">Total net collection in RAPDRP</span><svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></div>
+            <div class="prompt"><span class="ic">📍</span><span class="prompt-text">Top 10 sections by revenue in Non-RAPDRP</span><svg class="arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg></div>
           </div>
         </div>
 
@@ -432,16 +524,17 @@
     <div class="composer-wrap">
       <div class="composer-inner">
         <div class="composer">
-          <textarea class="composer-input" id="queryInput" rows="1" placeholder="Ask anything about your BESCOM electricity data…"></textarea>
+          <textarea class="composer-input" id="queryInput" rows="1" placeholder="Ask anything about BESCOM DCB data..."></textarea>
           <div class="composer-bar">
+            <button class="mic-btn" id="micBtn" type="button" title="Speak your question" aria-label="Voice input">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </button>
+            <span class="mic-status" id="micStatus">Listening… <span style="font-weight:400;color:var(--ink-3);margin-left:4px;">Esc to stop</span></span>
             <button class="send-btn" id="sendBtn">
               Send
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
             </button>
           </div>
-        </div>
-        <div class="composer-hint">
-          Press <span class="kbd">↵</span> to send · <span class="kbd">⇧</span>+<span class="kbd">↵</span> for new line
         </div>
       </div>
     </div>
@@ -465,8 +558,19 @@
     });
   });
 
-  /* ---- API base (served from same origin by FastAPI) ---- */
-  var API = '';   // same origin, e.g. http://127.0.0.1:8000
+  /* ---- Unified backend: ONE API. The dataset is chosen from the QUESTION ----
+     server-side (mentions "rapdrp" / "non-rapdrp", or combines both when neither
+     is named). Served from the same origin (port 8000); the localhost fallback
+     covers opening the page via file://. */
+  function API_BASE() {
+    if (location.origin && location.origin.indexOf('http') === 0) return '';  // same origin
+    return 'http://127.0.0.1:8000';
+  }
+  // Readable label for the "routed to" chip the backend returns on each answer.
+  var DATASET_LABELS = {
+    'RAPDRP': 'RAPDRP', 'Non-RAPDRP': 'Non-RAPDRP',
+    'combined': 'RAPDRP + Non-RAPDRP'
+  };
 
   /* ---- Composer ---- */
   var inp = document.getElementById('queryInput');
@@ -519,6 +623,28 @@
 
   function isNum(v) { return typeof v === 'number' || (v !== '' && v != null && !isNaN(v) && typeof v !== 'boolean'); }
 
+  // Infer the UNIT of a numeric column from its name so the UI can label it
+  // (mirrors the answer-text units). Returns a short unit string, or '' if the
+  // column isn't a recognised measure (e.g. a name/circle text column).
+  //   money   -> 'INR'   energy -> 'kWh'   ratio/eff -> '%'   counts -> 'installations'/'consumers'
+  function unitFor(col) {
+    var c = String(col || '').toLowerCase();
+    if (/_pct$|percent|efficiency|_eff\b|ratio|rate\b/.test(c)) return '%';
+    if (/collection|revenue|demand|arrear|balance|cb_total|ob_total|bc_total|pc_total|write_off|net_iod|amount|rupee|_sum\b|coll_/.test(c)) return 'INR';
+    if (/consumption|energy|kwh|_mu\b|units_/.test(c)) return 'kWh';
+    if (/consumers?\b/.test(c)) return 'consumers';
+    if (/installations?|connections?|meters?\b/.test(c)) return 'installations';
+    return '';
+  }
+
+  // Money crore helper for the single-value card: appends "(N crore)" for INR figures.
+  function croreSuffix(v) {
+    var n = Number(v);
+    if (!isFinite(n) || Math.abs(n) < 1e7) return '';
+    var cr = n / 1e7;
+    return ' (' + cr.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' crore)';
+  }
+
   // Format a number cleanly: whole numbers get NO decimals; genuine fractions
   // keep at most 2. Avoids ugly tails like "67,12,80,410.675".
   function fmtNum(v) {
@@ -530,6 +656,82 @@
     return r.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
 
+  // Rows-per-page. Tables longer than this get client-side pagination so even
+  // large results are fully browsable, one page at a time.
+  var PAGE_SIZE = 25;
+  var TABLES = {};   // table id -> { cols, rows, numCol, page }
+  var tableSeq = 0;
+
+  // Build just the header + a single page of <tbody> for a registered table.
+  function tableInnerHtml(t) {
+    var thead = '<tr>' + t.cols.map(function (c) {
+      // Add the inferred unit to numeric column headers, e.g. "net_collection (INR)".
+      var u = t.numCol[c] ? unitFor(c) : '';
+      var head = esc(c) + (u ? ' (' + u + ')' : '');
+      return '<th' + (t.numCol[c] ? ' class="num"' : '') + '>' + head + '</th>';
+    }).join('') + '</tr>';
+    var start = t.page * PAGE_SIZE;
+    var pageRows = t.rows.slice(start, start + PAGE_SIZE);
+    var body = pageRows.map(function (r) {
+      return '<tr>' + t.cols.map(function (c) {
+        var v = r[c];
+        var cls = t.numCol[c] ? ' class="num"' : '';
+        var disp = t.numCol[c] ? fmtNum(v) : esc(v);
+        return '<td' + cls + '>' + disp + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    return '<table class="result-table"><thead>' + thead +
+      '</thead><tbody>' + body + '</tbody></table>';
+  }
+
+  // Compact page list: 1 … 4 5 [6] 7 8 … 20  (windowed around the current page).
+  function pageList(cur, total) {
+    var out = [], add = function (p) { out.push(p); };
+    var win = 1;                                  // pages on each side of current
+    add(0);
+    var lo = Math.max(1, cur - win), hi = Math.min(total - 2, cur + win);
+    if (lo > 1) out.push('gap');
+    for (var p = lo; p <= hi; p++) add(p);
+    if (hi < total - 2) out.push('gap');
+    if (total > 1) add(total - 1);
+    return out;
+  }
+
+  function pagerHtml(t) {
+    var total = Math.ceil(t.rows.length / PAGE_SIZE);
+    if (total <= 1) return '';
+    var start = t.page * PAGE_SIZE + 1;
+    var end = Math.min(t.rows.length, (t.page + 1) * PAGE_SIZE);
+    var arrow = function (dir, disabled) {
+      var path = dir === 'prev' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6';
+      return '<button class="pager-btn" ' + (disabled ? 'disabled' : '') +
+        ' onclick="gotoPage(\'' + t.id + '\',' + (dir === 'prev' ? t.page - 1 : t.page + 1) + ')">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="' + path + '"/></svg></button>';
+    };
+    var nums = pageList(t.page, total).map(function (p) {
+      if (p === 'gap') return '<span class="pager-gap">…</span>';
+      return '<button class="pager-btn' + (p === t.page ? ' on' : '') +
+        '" onclick="gotoPage(\'' + t.id + '\',' + p + ')">' + (p + 1) + '</button>';
+    }).join('');
+    return '<div class="pager">' +
+      '<span class="pager-info">' + start.toLocaleString('en-IN') + '–' + end.toLocaleString('en-IN') +
+        ' of ' + t.rows.length.toLocaleString('en-IN') + ' rows</span>' +
+      '<span class="pager-ctrls">' + arrow('prev', t.page === 0) + nums + arrow('next', t.page >= total - 1) + '</span>' +
+      '</div>';
+  }
+
+  // Jump to a page: re-render the tbody in place and refresh the pager.
+  window.gotoPage = function (id, page) {
+    var t = TABLES[id]; if (!t) return;
+    var total = Math.ceil(t.rows.length / PAGE_SIZE);
+    t.page = Math.max(0, Math.min(page, total - 1));
+    var wrap = document.getElementById(id); if (!wrap) return;
+    var tblWrap = wrap.querySelector('.result-table-wrap');
+    if (tblWrap) tblWrap.innerHTML = tableInnerHtml(t);
+    var pager = wrap.querySelector('.pager');
+    if (pager) pager.outerHTML = pagerHtml(t);
+  };
+
   function renderTable(cols, rows) {
     if (!cols || !cols.length || !rows || !rows.length) return '';
     // A column is numeric only if every value in it is a number. Its header AND
@@ -538,19 +740,12 @@
     cols.forEach(function (c) {
       numCol[c] = rows.every(function (r) { return isNum(r[c]); });
     });
-    var thead = '<tr>' + cols.map(function (c) {
-      return '<th' + (numCol[c] ? ' class="num"' : '') + '>' + esc(c) + '</th>';
-    }).join('') + '</tr>';
-    var body = rows.slice(0, 100).map(function (r) {
-      return '<tr>' + cols.map(function (c) {
-        var v = r[c];
-        var cls = numCol[c] ? ' class="num"' : '';
-        var disp = numCol[c] ? fmtNum(v) : esc(v);
-        return '<td' + cls + '>' + disp + '</td>';
-      }).join('') + '</tr>';
-    }).join('');
-    return '<div class="result-table-wrap"><table class="result-table"><thead>' +
-      thead + '</thead><tbody>' + body + '</tbody></table></div>';
+    tableSeq++;
+    var id = 'tbl_' + tableSeq;
+    var t = TABLES[id] = { id: id, cols: cols, rows: rows, numCol: numCol, page: 0 };
+    return '<div id="' + id + '">' +
+      '<div class="result-table-wrap">' + tableInnerHtml(t) + '</div>' +
+      pagerHtml(t) + '</div>';
   }
 
   /* ===== Analytics engine (chart type is decided here, in the frontend) ===== */
@@ -619,7 +814,16 @@
       var entries = cols.filter(function(c){ return r0[c] !== null && r0[c] !== '' && String(r0[c]) !== 'None'; });
       if (!entries.length) return { html: '', init: function(){} };
       var body = entries.map(function(c){
-        var v = r0[c]; var disp = isNum(v) ? fmtNum(v) : esc(v);
+        var v = r0[c];
+        var disp;
+        if (isNum(v)) {
+          var u = unitFor(c);
+          // Money leads with the INR unit + crore equivalent; other units trail the number.
+          if (u === 'INR') disp = 'INR ' + fmtNum(v) + croreSuffix(v);
+          else disp = fmtNum(v) + (u ? ' ' + u : '');
+        } else {
+          disp = esc(v);
+        }
         return '<tr><th>' + esc(c.replace(/_/g,' ')) + '</th><td>' + disp + '</td></tr>';
       }).join('');
       return { html: '<div class="record-card"><table><tbody>' + body + '</tbody></table></div>',
@@ -735,9 +939,16 @@
 
   function renderBot(content, data) {
     var badge = '';
-    if (data.kind === 'clarify') badge = '<span class="msg-badge badge-clarify">Needs clarification</span><br>';
-    else if (data.kind === 'refuse') badge = '<span class="msg-badge badge-refuse">Can’t answer</span><br>';
-    else if (data.kind === 'error') badge = '<span class="msg-badge badge-error">Error</span><br>';
+    // Which dataset did the backend route this question to?
+    if (data.dataset) {
+      var lbl = DATASET_LABELS[data.dataset] || data.dataset;
+      var extra = data.dataset === 'combined' ? ' combined' : '';
+      badge += '<span class="ds-chip' + extra + '" title="Chosen from your question">' + esc(lbl) + '</span> ';
+    }
+    if (data.kind === 'clarify') badge += '<span class="msg-badge badge-clarify">Needs clarification</span><br>';
+    else if (data.kind === 'refuse') badge += '<span class="msg-badge badge-refuse">Can’t answer</span><br>';
+    else if (data.kind === 'error') badge += '<span class="msg-badge badge-error">Error</span><br>';
+    else if (data.dataset) badge += '<br>';
 
     // Render **bold** as <strong> (escape first so it stays XSS-safe), and drop
     // any stray leftover asterisks so the answer never shows raw markdown.
@@ -755,10 +966,12 @@
 
       if (data.rows.length > 1) {                    // then the data table (multi-row only)
         html += renderTable(data.columns, data.rows);
-        var shown = Math.min(data.rows.length, 100);
-        html += '<div class="result-meta">Showing ' + shown +
-          (data.row_count > shown ? ' of ' + data.row_count : '') + ' row' +
-          (data.row_count === 1 ? '' : 's') + '</div>';
+        // For tables that fit on one page (no pager), keep a simple count line.
+        // Paginated tables already show "X–Y of N rows" in the pager itself.
+        if (data.rows.length <= PAGE_SIZE) {
+          html += '<div class="result-meta">Showing ' + data.rows.length + ' row' +
+            (data.rows.length === 1 ? '' : 's') + '</div>';
+        }
       }
 
       html += buildSqlBlock(data.sql);               // "Generate SQL Query" button + panel
@@ -796,6 +1009,7 @@
     messagesEl.innerHTML = '';
     asked = [];                              // fresh session -> follow-ups start over
     turns = [];                              // and no stale context to refer back to
+    TABLES = {};                             // drop paginated-table state for old answers
     var hero = document.getElementById('heroBlock');
     var prompts = document.getElementById('promptsSection');
     if (hero) hero.style.display = '';
@@ -821,7 +1035,7 @@
     inp.style.height = 'auto';
     var content = addBotShell();
 
-    fetch(API + '/api/query', {
+    fetch(API_BASE() + '/api/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       // asked -> never repeat a follow-up; turns -> resolve "that circle" etc.
@@ -855,27 +1069,84 @@
   });
   document.getElementById('sendBtn').addEventListener('click', send);
 
-  /* ---- Click a prompt -> fill composer ---- */
-  document.querySelectorAll('.prompt').forEach(function (p) {
-    p.addEventListener('click', function () {
-      inp.value = p.querySelector('.prompt-text').textContent.trim();
-      inp.style.height = 'auto';
-      inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
-      send();
+  /* ---- Voice input (browser Web Speech API) ----
+     Modelled on the NAG voice feature, but adapted to BESCOM's stack: BESCOM's
+     LLM (Gemma via the enlight.dev gateway) cannot transcribe audio, so instead
+     of NAG's server-side /transcribe endpoint we use the browser's built-in
+     SpeechRecognition. Same UX contract: mic fills the input box (never
+     auto-sends), press the mic again or Esc to stop. Language follows the EN /
+     ಕನ್ನಡ tab. Degrades gracefully: if the browser has no SpeechRecognition
+     (e.g. Firefox), the mic button is hidden entirely. */
+  (function setupVoice() {
+    var micBtn = document.getElementById('micBtn');
+    var micStatus = document.getElementById('micStatus');
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR || !micBtn) { if (micBtn) micBtn.hidden = true; return; }
+
+    // Recognition language from the active tab: EN -> en-IN, ಕನ್ನಡ -> kn-IN.
+    function activeLang() {
+      var t = document.querySelector('.lang-tab.active');
+      return (t && t.getAttribute('data-lang') === 'kn') ? 'kn-IN' : 'en-IN';
+    }
+
+    var recog = null, listening = false;
+
+    function setListening(on) {
+      listening = on;
+      micBtn.classList.toggle('listening', on);
+      micStatus.classList.toggle('show', on);
+      micBtn.title = on ? 'Stop listening' : 'Speak your question';
+    }
+
+    function start() {
+      if (listening) { stop(); return; }
+      recog = new SR();
+      recog.lang = activeLang();
+      recog.interimResults = true;   // show words as they are recognised
+      recog.continuous = false;      // one utterance, then stop
+      recog.maxAlternatives = 1;
+
+      // Remember what was already typed so dictation appends, not overwrites.
+      var baseText = inp.value ? inp.value.replace(/\s*$/, '') + ' ' : '';
+
+      recog.onresult = function (e) {
+        var txt = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) txt += e.results[i][0].transcript;
+        inp.value = baseText + txt;
+        inp.style.height = 'auto';
+        inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
+      };
+      recog.onerror = function (e) {
+        setListening(false);
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+          alert('Microphone permission denied. Please allow microphone access and try again.');
+        }
+        // 'no-speech' / 'aborted' are silent — user just sees the mic reset.
+      };
+      recog.onend = function () { setListening(false); inp.focus(); };
+
+      try { recog.start(); setListening(true); }
+      catch (err) { setListening(false); }
+    }
+    function stop() { if (recog) { try { recog.stop(); } catch (e) {} } setListening(false); }
+
+    micBtn.addEventListener('click', start);
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && listening) { e.preventDefault(); stop(); }
     });
+  })();
+
+  /* ---- Click a prompt -> fill composer (delegated, so rebuilt prompts work) ---- */
+  document.getElementById('promptsSection').addEventListener('click', function (e) {
+    var p = e.target.closest('.prompt');
+    if (!p) return;
+    inp.value = p.querySelector('.prompt-text').textContent.trim();
+    inp.style.height = 'auto';
+    inp.style.height = Math.min(inp.scrollHeight, 160) + 'px';
+    send();
   });
 
-  /* ---- BESCOM backend data ---- */
-  // Fallback snapshot (used when opened via file:// where fetch is blocked).
-  // Source: Backend/bescom_summary.json (generated from BESCOM.xlsx).
-  var BESCOM_FALLBACK = {
-    "utility": "BESCOM", "records": 20000,
-    "zones": 4, "circles": 9, "divisions": 22,
-    "total_installations": 91132858, "active_installations": 88407331,
-    "metered_installations": 82007088,
-    "net_consumption_mu": 5150.9, "net_revenue_cr": 48174.7
-  };
-
+  /* ---- Backend summary data ---- */
   function fmtIndian(n) {
     var s = String(Math.round(n));
     var last3 = s.slice(-3);
@@ -885,38 +1156,40 @@
     return rest + last3;
   }
 
-  function renderBescom(d) {
+  function renderSummary(d) {
     var el = document.getElementById('bescom-summary');
     var metrics = [
-      { value: fmtIndian(d.total_installations), label: 'Installations' },
-      { value: fmtIndian(d.active_installations), label: 'Active' },
-      { value: d.net_consumption_mu.toLocaleString('en-IN') + ' MU', label: 'Net Consumption' },
-      { value: '₹' + d.net_revenue_cr.toLocaleString('en-IN') + ' Cr', label: 'Net Revenue' }
+      { ic: '🔌', value: fmtIndian(d.total_installations), label: 'Installations' },
+      { ic: '⚡', value: fmtIndian(d.active_installations), label: 'Active' },
+      { ic: '📈', value: (d.net_consumption_mu != null ? d.net_consumption_mu.toLocaleString('en-IN') : '—') + ' MU', label: 'Net Consumption' },
+      { ic: '💰', value: '₹' + (d.net_revenue_cr != null ? d.net_revenue_cr.toLocaleString('en-IN') : '—') + ' Cr', label: 'Net Collection' }
     ];
     var metricsHtml = metrics.map(function (m) {
-      return '<div class="bescom-metric"><div class="m-value">' + m.value +
-        '</div><div class="m-label">' + m.label + '</div></div>';
+      return '<div class="bescom-metric">' +
+        '<div class="m-top"><span class="m-ic">' + m.ic + '</span>' +
+        '<span class="m-label">' + m.label + '</span></div>' +
+        '<div class="m-value">' + m.value + '</div></div>';
     }).join('');
-
-    el.innerHTML =
-      '<p class="bescom-intro">Ask anything about <b>BESCOM</b> billing &amp; installation data in natural language ' +
-      'across the Bengaluru supply area — get answers as text, tables and charts.</p>' +
-      '<div class="bescom-metrics">' + metricsHtml + '</div>';
+    el.innerHTML = '<div class="bescom-metrics">' + metricsHtml + '</div>';
   }
 
-  (function loadBescom() {
-    // Prefer the live backend (real numbers straight from Neon); fall back to
-    // the static snapshot / bundled fallback when the API isn't reachable.
-    fetch(API + '/api/summary')
+  function renderSummaryError() {
+    document.getElementById('bescom-summary').innerHTML =
+      '<div class="bescom-loading">Backend not reachable — start the unified server ' +
+      '(uvicorn on port 8000) to load live figures.</div>';
+  }
+
+  function loadSummary() {
+    document.getElementById('bescom-summary').innerHTML =
+      '<div class="bescom-loading">Loading BESCOM data…</div>';
+    fetch(API_BASE() + '/api/summary')
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-      .then(renderBescom)
-      .catch(function () {
-        fetch('../Backend/bescom_summary.json')
-          .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-          .then(renderBescom)
-          .catch(function () { renderBescom(BESCOM_FALLBACK); });
-      });
-  })();
+      .then(function (d) { if (d && d.error) throw new Error(d.error); renderSummary(d); })
+      .catch(renderSummaryError);
+  }
+
+  // Initial render (combined figures across both datasets).
+  loadSummary();
 </script>
 
 </body>

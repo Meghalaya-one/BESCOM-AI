@@ -1,71 +1,101 @@
-# BESCOM NLP-to-SQL
+# BESCOM NLP-to-SQL — auto-routed (RAPDRP + Non-RAPDRP)
 
-Ask questions about BESCOM DCB (Demand-Collection-Balance) audit data in plain
-English. The backend turns the question into SQL with Gemini, runs it against the
-live Neon Postgres database, and returns a plain-language answer plus a table.
+Ask questions about BESCOM DCB (Demand-Collection-Balance) data in plain English.
+A single backend turns the question into SQL with **Gemma** (an OpenAI-compatible
+LLM endpoint), runs it against the live Neon Postgres database, and returns a
+plain-language answer plus a table and charts.
 
-```
-Frontend (chat UI)  ──►  POST /api/query
-                          ├─ prompt_assembler builds the system prompt from
-                          │  schema_metadata.py (REAL column names)
-                          ├─ Gemini writes SQL  (or CLARIFY: / REFUSE:)
-                          ├─ guardrails: read-only, single statement, our table only
-                          ├─ execute on Neon  (one auto-retry on error)
-                          └─ Gemini formats the answer
-                     ◄──  { answer, sql, columns, rows, kind }
-```
+**The dataset is chosen automatically from the question — there is no dataset tab:**
 
-## Files
-
-| File | Purpose |
+| The question… | is answered from… |
 |---|---|
-| `Backend/app.py` | FastAPI server: `/api/query`, `/api/summary`, `/api/health`, serves the frontend |
-| `Backend/prompt_assembler.py` | Builds the system prompt, few-shots, recovery + formatter prompts |
-| `Backend/schema_metadata.py` | The **real** DB schema (table `bescom_database`) with column meanings & rules |
-| `Backend/.env` | Neon URL + your Gemini key |
-| `Backend/requirements.txt` | Python dependencies |
-| `Frontend/index.html` | Chat UI, wired to the backend |
-| `Backend/NLP_to_SQL_Prompt_Engineering_Guide_BESCOM.md` | The original prompt-engineering reference |
+| mentions **RAPDRP** | the `"RAPDRP"` table |
+| mentions **Non-RAPDRP** | the `"Non RAPDRP"` table |
+| mentions **neither** | the `bescom_combined` view — **both datasets summed together** |
 
-> **Note:** the guide uses idealized column names (`bescom_dcb_audit`,
-> `tariff_category`, `net_collection_final`). The live DB uses different physical
-> names (`bescom_database`, `tariff`, `net_collection_collection_...`). All prompts
-> are built from `schema_metadata.py`, which maps the guide's rules onto the real
-> names, so generated SQL always references columns that exist.
+```
+Frontend (chat UI)  ──►  POST /api/query   (one unified backend, port 8000)
+                          ├─ route(): keyword match on the question
+                          │    "rapdrp" → RAPDRP · "non-rapdrp" → Non-RAPDRP · else → combined
+                          ├─ pick that dataset's schema + prompt
+                          ├─ Gemma writes SQL  (or CLARIFY: / REFUSE:)
+                          ├─ guardrails: read-only, single statement, that table/view only
+                          ├─ execute on Neon  (one auto-retry on error)
+                          └─ Gemma formats the answer + follow-up (in parallel)
+                     ◄──  { answer, sql, rows, kind, dataset, follow_up }
+```
+
+## How "combine both" works
+
+The two tables have **different schemas** (different column names, geography,
+tariff codes), so "sum both" is not a naive query over two tables. A Postgres
+**view** `bescom_combined` UNIONs them over their shared, canonical columns
+(aliasing the differently-named ones, e.g. RAPDRP `net_consumption` and
+Non-RAPDRP `net_consumption_33_34` both become `net_consumption`) and adds a
+`dataset` tag column. Because the view stacks both tables' rows, an ordinary
+`SUM`/`COUNT`/`GROUP BY` over it adds the datasets together — and "split by
+dataset" is just `GROUP BY dataset`.
+
+Create/refresh the view with:
+```
+python -c "import psycopg2,os; from dotenv import load_dotenv; load_dotenv('unified/.env'); \
+c=psycopg2.connect(os.environ['DATABASE_URL']); c.cursor().execute(open('shared/create_combined_view.sql').read()); c.commit()"
+```
+
+## Layout
+
+| Path | Purpose |
+|---|---|
+| `unified/backend/app.py` | The single backend: router + `/api/query`, `/api/summary`, `/api/health`, serves the frontend |
+| `unified/backend/datasets.py` | Loads the 3 (schema, prompt) pairs and the keyword `route()` |
+| `unified/backend/schema_combined.py`, `prompt_combined.py` | Schema + prompts for the `bescom_combined` view |
+| `unified/.env` | Neon URL + Gemma key/base-URL/model |
+| `RAPDRP/backend/`, `Non-RAPDRP/backend/` | The per-dataset schema + prompt modules (reused by the unified backend) |
+| `shared/create_combined_view.sql` | Defines the `bescom_combined` view |
+| `Frontend/index.html` | Shared chat UI (no dataset tab; shows which dataset each answer used) |
+
+All data lives in one Neon database (`neondb`): tables `"RAPDRP"` and `"Non RAPDRP"`
+plus the `bescom_combined` view.
+
+**LLM:** an OpenAI-compatible **Gemma** endpoint (vLLM behind the `enlight.dev`
+gateway) via the `openai` SDK. Auth uses a custom `apikey` header (not
+`Authorization: Bearer`), so the client is built with `default_headers={"apikey": …}`.
+`gemma-4-12b` has a **4096-token total context**, so prompts inject a compact
+few-shot subset and output budgets are small (SQL ≤ 400 tokens, follow-up ≤ 48).
 
 ## Setup
 
-1. **Add your Gemini API key.** Edit `Backend/.env` and replace the placeholder:
-   ```
-   GEMINI_API_KEY=your_real_key_here
-   ```
-   Get one free at https://aistudio.google.com/apikey
+`unified/.env` already contains the Neon URL and Gemma settings. To change them:
+```
+GEMMA_API_KEY=your_key_here
+GEMMA_BASE_URL=https://poc-aiops.enlight.dev/openai/v1
+GEMMA_MODEL=gemma-4-12b
+```
 
-2. **Install dependencies** (first time only):
-   ```
-   cd "Backend"
-   python -m pip install -r requirements.txt
-   ```
+Install dependencies (first time only):
+```
+python -m pip install -r unified/backend/requirements.txt
+```
 
-3. **Run the server:**
-   ```
-   cd "Backend"
-   python -m uvicorn app:app --host 127.0.0.1 --port 8000
-   ```
+## Run
 
-4. **Open the app:** http://127.0.0.1:8000/
+```
+cd unified/backend && python app.py        # -> http://127.0.0.1:8000
+```
+Open http://127.0.0.1:8000/ and just ask.
 
 ## Try these
 
-- How many active installations are there in each zone?
-- Which circle has the highest net collection?
-- What's the total write-off for LT tariffs in the BRAZ zone?
-- Show all rows for Tumakuru division. *(catches the casing trap)*
-- How has net collection trended month over month? *(correctly refused — no time column)*
-- How many active installations does Malleshwaram have? *(asks which of the 4 installation columns)*
+- What is the total number of active installations?  *(combines both datasets)*
+- Show collection efficiency by circle  *(combined; recomputes the ratio)*
+- Total net collection in **RAPDRP**  *(routes to RAPDRP only)*
+- Top 10 sections by revenue in **Non-RAPDRP**  *(routes to Non-RAPDRP only)*
+- Split total net collection by dataset  *(one row per source)*
+- Show the month-over-month trend  *(correctly refused — no time column)*
 
 ## Safety
 
-The backend only ever runs a **single read-only `SELECT`** on `bescom_database`.
-`INSERT/UPDATE/DELETE/DROP/ALTER/...`, multiple statements, other tables, and the
-junk columns `c_2`/`c_4` are all rejected before anything touches the database.
+The backend only ever runs a **single read-only `SELECT`** on the routed
+dataset's own table/view (the LLM only proposes SQL; these guardrails decide what
+runs). Writes/DDL, multiple statements, other tables, and blank/junk columns are
+all rejected before anything touches the database.

@@ -1,0 +1,10 @@
+# Non-RAPDRP NLP-to-SQL backend configuration
+# -----------------------------------------
+
+# Neon Postgres connection string (live BESCOM database)
+DATABASE_URL=postgresql://neondb_owner:PASTE_YOUR_NEON_PASSWORD_HERE@ep-falling-dew-atqzzto3-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require
+
+# LLM: self-hosted Qwen endpoint (OpenAI-compatible vLLM, self-signed cert).
+# No API key required.
+GEMMA_BASE_URL=https://34.135.75.215/api/v1
+GEMMA_MODEL=Qwen/Qwen2.5-Coder-7B-Instruct

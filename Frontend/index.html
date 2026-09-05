@@ -62,6 +62,31 @@
   .nav-item.active { background: rgba(140,200,241,0.20); color: white; }
   .nav-item .icon { width: 16px; height: 16px; opacity: 0.85; flex-shrink: 0; }
 
+  .history-panel { margin: 2px 8px 6px; display: flex; flex-direction: column; gap: 1px; }
+  .history-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 10px 7px 34px;
+    border-radius: 6px; cursor: pointer; font-size: 12.5px;
+    color: rgba(255,255,255,0.78); transition: background .15s;
+  }
+  .history-item:hover { background: rgba(255,255,255,0.08); }
+  .history-item.active { background: rgba(140,200,241,0.20); color: white; }
+  .history-item-title {
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .history-item-date { font-size: 10px; color: rgba(255,255,255,0.45); flex-shrink: 0; }
+  .history-item-del {
+    flex-shrink: 0; opacity: 0; width: 16px; height: 16px; display: flex;
+    align-items: center; justify-content: center; border-radius: 4px; color: rgba(255,255,255,0.6);
+  }
+  .history-item:hover .history-item-del { opacity: 1; }
+  .history-item-del:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .history-empty { padding: 7px 10px 7px 34px; font-size: 12px; color: rgba(255,255,255,0.4); }
+  .history-clear {
+    padding: 6px 10px 6px 34px; font-size: 11.5px; color: rgba(255,255,255,0.5);
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .history-clear:hover { color: rgba(255,255,255,0.85); }
+
   .sidebar-foot {
     margin-top: auto; padding: 12px; border-top: 1px solid rgba(255,255,255,0.08);
   }
@@ -106,7 +131,7 @@
     min-height: 0;
     background: linear-gradient(180deg, var(--bg) 0%, var(--p-50) 100%);
   }
-  .chat-inner { max-width: 920px; margin: 0 auto; padding: 32px 24px 200px; }
+  .chat-inner { max-width: 1280px; margin: 0 auto; padding: 32px 24px 200px; }
 
   /* HERO */
   .hero { text-align: center; padding: 40px 0 24px; animation: rise .5s cubic-bezier(.2,.7,.3,1) both; }
@@ -204,7 +229,7 @@
     padding: 16px 24px 20px; background: linear-gradient(180deg, transparent 0%, var(--p-50) 30%);
   }
   @media (max-width: 880px) { .composer-wrap { left: 0; } }
-  .composer-inner { max-width: 920px; margin: 0 auto; }
+  .composer-inner { max-width: 1280px; margin: 0 auto; }
   .composer {
     background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px;
     box-shadow: 0 4px 20px rgba(10,46,76,0.08);
@@ -290,17 +315,6 @@
   /* Answer text: plain, directly on the outer card (no inner box). */
   .msg.bot .msg-text { color: var(--ink-1); }
   .msg.bot .msg-text strong { color: var(--p-700); font-weight: 700; }
-  .msg-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px;
-    border-radius: 5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
-  /* "Routed to" dataset chip on each answer */
-  .ds-chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px;
-    border-radius: 5px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px;
-    background: var(--p-100); color: var(--p-700); border: 1px solid var(--p-200); }
-  .ds-chip.combined { background: var(--teal-bg); color: var(--teal); border-color: var(--teal); }
-  .badge-clarify { background: var(--amber-bg); color: var(--amber); }
-  .badge-refuse  { background: #FDE7E7; color: #B42318; }
-  .badge-error   { background: #FDE7E7; color: #B42318; }
-
   /* ===== Analytics / charts (inner section card on the outer white card) ===== */
   .analytics { margin-top: 14px; }
   .chart-card {
@@ -328,9 +342,10 @@
   .record-card td { padding: 9px 14px; color: var(--ink-1); border-bottom: 1px solid var(--p-50);
     font-family: 'JetBrains Mono', monospace; }
 
-  /* Follow-up "NEXT STEP" card (clickable) */
+  /* Follow-up "NEXT STEP" cards (clickable, up to 2 side by side) */
+  .next-steps { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
   .next-step {
-    margin-top: 14px; padding: 12px 16px; border-left: 3px solid var(--p-500);
+    flex: 1 1 220px; padding: 12px 16px; border-left: 3px solid var(--p-500);
     background: linear-gradient(135deg, var(--p-50) 0%, var(--p-100) 100%);
     border-radius: 0 10px 10px 0; cursor: pointer; transition: background .15s;
   }
@@ -409,11 +424,13 @@
   .sql-code { margin: 0; padding: 12px 14px; color: #BEE0F8;
     font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.55;
     overflow-x: auto; white-space: pre; }
-  .typing { display: inline-flex; gap: 4px; padding: 4px 0; }
-  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--p-300);
+  .typing { display: inline-flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .typing-dots { display: inline-flex; gap: 4px; }
+  .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--p-300);
     animation: bounce 1.2s infinite ease-in-out; }
-  .typing span:nth-child(2){ animation-delay: .15s; } .typing span:nth-child(3){ animation-delay:.3s; }
+  .typing-dots span:nth-child(2){ animation-delay: .15s; } .typing-dots span:nth-child(3){ animation-delay:.3s; }
   @keyframes bounce { 0%,80%,100%{ transform: scale(.6); opacity:.5;} 40%{ transform: scale(1); opacity:1;} }
+  .thinking-timer { font-size: 12px; color: var(--p-300); font-variant-numeric: tabular-nums; }
 
   /* Scrollbar */
   .chat-area::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 8px; }
@@ -451,10 +468,11 @@
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
       New chat
     </div>
-    <div class="nav-item">
+    <div class="nav-item" id="historyBtn">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-      Recent
+      History of chat
     </div>
+    <div class="history-panel" id="historyPanel" hidden></div>
 
     <div class="nav-section">Resources</div>
     <div class="nav-item">
@@ -551,6 +569,10 @@
   })();
 
   /* ---- Language tabs ---- */
+  function currentLang() {
+    var t = document.querySelector('.lang-tab.active');
+    return (t && t.getAttribute('data-lang')) || 'en';
+  }
   document.querySelectorAll('.lang-tab').forEach(function (btn) {
     btn.addEventListener('click', function () {
       document.querySelectorAll('.lang-tab').forEach(function (b) { b.classList.remove('active'); });
@@ -566,12 +588,6 @@
     if (location.origin && location.origin.indexOf('http') === 0) return '';  // same origin
     return 'http://127.0.0.1:8000';
   }
-  // Readable label for the "routed to" chip the backend returns on each answer.
-  var DATASET_LABELS = {
-    'RAPDRP': 'RAPDRP', 'Non-RAPDRP': 'Non-RAPDRP',
-    'combined': 'RAPDRP + Non-RAPDRP'
-  };
-
   /* ---- Composer ---- */
   var inp = document.getElementById('queryInput');
   var messagesEl = document.getElementById('messages');
@@ -615,7 +631,9 @@
     el.innerHTML =
       '<div class="msg-avatar">AI</div>' +
       '<div class="msg-body"><div class="msg-role">BESCOM AI</div>' +
-      '<div class="msg-content"><div class="typing"><span></span><span></span><span></span></div></div></div>';
+      '<div class="msg-content"><div class="typing">' +
+      '<div class="typing-dots"><span></span><span></span><span></span></div>' +
+      '<span class="thinking-timer">0.0s</span></div></div></div>';
     messagesEl.appendChild(el);
     scrollDown();
     return el.querySelector('.msg-content');
@@ -861,13 +879,18 @@
     return { html: html, init: function(){ CDATA[cid] = { labels: labels, values: values }; drawChart(cid, defType); } };
   }
 
-  // Follow-up as a clickable "NEXT STEP" card (from backend follow_up).
-  function buildFollowUp(text) {
-    if (!text) return '';
-    return '<div class="next-step" onclick="askFollowUp(this)">' +
-      '<div class="next-step-label">Next step</div>' +
-      '<div class="next-step-text">' + esc(text) + '</div>' +
-      '</div>';
+  // Follow-up suggestions as clickable "NEXT STEP" cards (from backend follow_ups).
+  function buildFollowUp(list) {
+    var items = (list || []).filter(Boolean);
+    if (!items.length) return '';
+    var html = '<div class="next-steps">';
+    items.forEach(function (text) {
+      html += '<div class="next-step" onclick="askFollowUp(this)">' +
+        '<div class="next-step-label">Next suggested question</div>' +
+        '<div class="next-step-text">' + esc(text) + '</div>' +
+        '</div>';
+    });
+    return html + '</div>';
   }
   window.askFollowUp = function(card) {
     var t = card.querySelector('.next-step-text');
@@ -938,24 +961,12 @@
   };
 
   function renderBot(content, data) {
-    var badge = '';
-    // Which dataset did the backend route this question to?
-    if (data.dataset) {
-      var lbl = DATASET_LABELS[data.dataset] || data.dataset;
-      var extra = data.dataset === 'combined' ? ' combined' : '';
-      badge += '<span class="ds-chip' + extra + '" title="Chosen from your question">' + esc(lbl) + '</span> ';
-    }
-    if (data.kind === 'clarify') badge += '<span class="msg-badge badge-clarify">Needs clarification</span><br>';
-    else if (data.kind === 'refuse') badge += '<span class="msg-badge badge-refuse">Can’t answer</span><br>';
-    else if (data.kind === 'error') badge += '<span class="msg-badge badge-error">Error</span><br>';
-    else if (data.dataset) badge += '<br>';
-
     // Render **bold** as <strong> (escape first so it stays XSS-safe), and drop
     // any stray leftover asterisks so the answer never shows raw markdown.
     var answerHtml = esc(data.answer || '')
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*/g, '');
-    var html = badge + '<div class="msg-text">' + answerHtml + '</div>';
+    var html = '<div class="msg-text">' + answerHtml + '</div>';
 
     var analytics = { html: '', init: function(){} };
     var hasRows = data.rows && data.rows.length && (data.kind === 'table' || data.kind === 'scalar');
@@ -977,7 +988,7 @@
       html += buildSqlBlock(data.sql);               // "Generate SQL Query" button + panel
     }
 
-    html += buildFollowUp(data.follow_up);           // clickable "Next step" card
+    html += buildFollowUp(data.follow_ups);           // clickable "Next step" cards
 
     if (hasRows) {
       html += buildSources(data.sql);                // "Sources:" chips from the SQL
@@ -985,6 +996,8 @@
       var parts = [nowTime()];
       if (typeof data.row_count === 'number')
         parts.push(data.row_count + ' result' + (data.row_count === 1 ? '' : 's'));
+      if (typeof data.response_time_ms === 'number' && !isNaN(data.response_time_ms))
+        parts.push((data.response_time_ms / 1000).toFixed(1) + 's');
       html += '<div class="ans-meta">' + parts.join(' · ') + '</div>';
     }
 
@@ -1004,12 +1017,161 @@
     if (prompts) prompts.style.display = 'none';
   }
 
+  /* ---- Chat history (persisted in this browser via localStorage) ----
+     Every answered turn is saved under the active chat's id as soon as it
+     comes back, so a page reload never loses a conversation. Only the fields
+     renderBot() actually reads are kept (not the raw response) to keep each
+     saved turn small. */
+  var HISTORY_KEY = 'bescom_chat_history';
+  var HISTORY_MAX_CHATS = 50;
+  var currentChatId = null;
+  var currentTurns = [];      // [{ question, data }] for the active chat
+
+  function newChatId() {
+    return 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function loadHistory() {
+    try {
+      var raw = localStorage.getItem(HISTORY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+
+  function saveHistoryList(list) {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+      return true;
+    } catch (e) {
+      // Storage full: drop the oldest chats and retry once.
+      if (list.length > 1) {
+        list = list.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; }).slice(0, Math.ceil(list.length / 2));
+        try { localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); return true; } catch (e2) { return false; }
+      }
+      return false;
+    }
+  }
+
+  // Save/update the active chat's entry after each answered turn.
+  function persistCurrentChat() {
+    if (!currentTurns.length) return;
+    var list = loadHistory();
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) { if (list[i].id === currentChatId) { idx = i; break; } }
+    var title = currentTurns[0].question;
+    if (title.length > 60) title = title.slice(0, 60) + '…';
+    var entry = { id: currentChatId, title: title, updatedAt: Date.now(), turns: currentTurns };
+    if (idx === -1) list.unshift(entry); else list[idx] = entry;
+    list.sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+    if (list.length > HISTORY_MAX_CHATS) list = list.slice(0, HISTORY_MAX_CHATS);
+    saveHistoryList(list);
+    renderHistoryPanel();
+  }
+
+  function deleteChat(id) {
+    var list = loadHistory().filter(function (c) { return c.id !== id; });
+    saveHistoryList(list);
+    renderHistoryPanel();
+  }
+
+  function relativeDate(ts) {
+    var diff = Date.now() - ts, day = 86400000;
+    if (diff < day) return new Date(ts).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    if (diff < 2 * day) return 'Yesterday';
+    if (diff < 7 * day) return Math.floor(diff / day) + 'd ago';
+    return new Date(ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+  }
+
+  var historyPanel = document.getElementById('historyPanel');
+  var historyBtn = document.getElementById('historyBtn');
+
+  function renderHistoryPanel() {
+    var list = loadHistory();
+    if (!list.length) {
+      historyPanel.innerHTML = '<div class="history-empty">No conversations yet</div>';
+      return;
+    }
+    var html = '';
+    list.forEach(function (c) {
+      html += '<div class="history-item' + (c.id === currentChatId ? ' active' : '') + '" data-id="' + esc(c.id) + '">' +
+        '<span class="history-item-title">' + esc(c.title) + '</span>' +
+        '<span class="history-item-date">' + relativeDate(c.updatedAt) + '</span>' +
+        '<span class="history-item-del" title="Delete">' +
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>' +
+        '</span></div>';
+    });
+    html += '<div class="history-clear">Clear all history</div>';
+    historyPanel.innerHTML = html;
+
+    historyPanel.querySelectorAll('.history-item').forEach(function (row) {
+      row.addEventListener('click', function () { loadChat(row.getAttribute('data-id')); });
+      row.querySelector('.history-item-del').addEventListener('click', function (e) {
+        e.stopPropagation();
+        deleteChat(row.getAttribute('data-id'));
+      });
+    });
+    var clearLink = historyPanel.querySelector('.history-clear');
+    if (clearLink) clearLink.addEventListener('click', function () {
+      if (!confirm('Delete all saved chat history? This cannot be undone.')) return;
+      saveHistoryList([]);
+      renderHistoryPanel();
+    });
+  }
+
+  // Replay a saved chat's turns into the message pane, and restore the
+  // asked/turns context arrays so follow-up questions still resolve correctly.
+  function loadChat(id) {
+    var list = loadHistory();
+    var chat = null;
+    for (var i = 0; i < list.length; i++) { if (list[i].id === id) { chat = list[i]; break; } }
+    if (!chat) return;
+
+    messagesEl.innerHTML = '';
+    TABLES = {};
+    hideWelcome();
+    asked = [];
+    turns = [];
+    currentChatId = chat.id;
+    currentTurns = chat.turns;
+
+    chat.turns.forEach(function (t) {
+      addUserMsg(t.question);
+      var content = addBotShell();
+      renderBot(content, t.data);
+      if (asked.indexOf(t.question) === -1) asked.push(t.question);
+      (t.data.follow_ups || []).forEach(function (fu) {
+        if (fu && asked.indexOf(fu) === -1) asked.push(fu);
+      });
+      if (t.data.sql && t.data.rows && t.data.rows.length) {
+        turns.push({ question: t.question, sql: t.data.sql, rows: t.data.rows.slice(0, 5) });
+        if (turns.length > 2) turns.shift();
+      }
+    });
+
+    renderHistoryPanel();
+    historyPanel.hidden = true;
+    historyBtn.classList.remove('active');
+    inp.focus();
+  }
+
+  if (historyBtn) {
+    historyBtn.addEventListener('click', function () {
+      var willShow = historyPanel.hidden;
+      if (willShow) renderHistoryPanel();
+      historyPanel.hidden = !willShow;
+      historyBtn.classList.toggle('active', willShow);
+    });
+  }
+
   // New chat: clear the conversation and bring the welcome block back.
   function newChat() {
     messagesEl.innerHTML = '';
     asked = [];                              // fresh session -> follow-ups start over
     turns = [];                              // and no stale context to refer back to
     TABLES = {};                             // drop paginated-table state for old answers
+    currentChatId = newChatId();
+    currentTurns = [];
+    if (historyBtn && historyBtn.classList.contains('active')) renderHistoryPanel();
     var hero = document.getElementById('heroBlock');
     var prompts = document.getElementById('promptsSection');
     if (hero) hero.style.display = '';
@@ -1019,6 +1181,7 @@
     scrollDown();
     inp.focus();
   }
+  currentChatId = newChatId();               // fresh chat id for this page load
   var newChatBtn = document.getElementById('newChatBtn');
   if (newChatBtn) newChatBtn.addEventListener('click', newChat);
 
@@ -1035,19 +1198,34 @@
     inp.style.height = 'auto';
     var content = addBotShell();
 
+    // Live countdown while waiting: ticks the "thinking" timer next to the
+    // dots every 100ms so the user sees elapsed time, not just a spinner.
+    var startedAt = Date.now();
+    var timerEl = content.querySelector('.thinking-timer');
+    var timerInterval = setInterval(function () {
+      if (timerEl) timerEl.textContent = ((Date.now() - startedAt) / 1000).toFixed(1) + 's';
+    }, 100);
+
     fetch(API_BASE() + '/api/query', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // asked -> never repeat a follow-up; turns -> resolve "that circle" etc.
-      body: JSON.stringify({ question: q, asked: asked, history: turns.slice(-2) })
+      // asked -> never repeat a follow-up; turns -> resolve "that circle" etc.;
+      // lang -> 'kn' makes the backend answer in Kannada instead of English.
+      body: JSON.stringify({ question: q, asked: asked, history: turns.slice(-2), lang: currentLang() })
     })
-      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (r) {
+        var responseTimeMs = r.headers.get('X-Response-Time-Ms');
+        return r.json().then(function (j) { return { ok: r.ok, j: j, responseTimeMs: responseTimeMs }; });
+      })
       .then(function (res) {
         var d = res.j || {};
         if (!d.kind) d.kind = res.ok ? 'table' : 'error';
         if (!d.answer) d.answer = d.error || 'No answer returned.';
-        // Record the suggested follow-up so the next call knows not to repeat it.
-        if (d.follow_up && asked.indexOf(d.follow_up) === -1) asked.push(d.follow_up);
+        if (res.responseTimeMs) d.response_time_ms = parseInt(res.responseTimeMs, 10);
+        // Record the suggested follow-ups so the next call knows not to repeat them.
+        (d.follow_ups || []).forEach(function (fu) {
+          if (fu && asked.indexOf(fu) === -1) asked.push(fu);
+        });
         // Remember this turn so the NEXT question can refer back to it. Only a
         // turn that actually produced data can be a referent; keep 5 rows max so
         // the prompt stays small.
@@ -1055,9 +1233,18 @@
           turns.push({ question: q, sql: d.sql, rows: d.rows.slice(0, 5) });
           if (turns.length > 2) turns.shift();
         }
+        clearInterval(timerInterval);
         renderBot(content, d);
+        // Persist this turn to chat history (only the fields renderBot needs).
+        currentTurns.push({ question: q, data: {
+          kind: d.kind, answer: d.answer, dataset: d.dataset, sql: d.sql,
+          columns: d.columns, rows: d.rows, row_count: d.row_count,
+          follow_ups: d.follow_ups, response_time_ms: d.response_time_ms,
+        } });
+        persistCurrentChat();
       })
       .catch(function (e) {
+        clearInterval(timerInterval);
         renderBot(content, { kind: 'error', answer: 'Request failed: ' + e.message +
           '. Is the backend running on this address?' });
       })

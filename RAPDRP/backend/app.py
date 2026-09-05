@@ -7,7 +7,7 @@ Pipeline for POST /api/query:
       -> guardrails (read-only, single stmt, table whitelist)
       -> execute on Neon Postgres  (on error -> one recovery attempt via Gemma)
       -> Gemma formats a plain-language answer
-    => { answer, sql, columns, rows, row_count, kind, follow_up }
+    => { answer, sql, columns, rows, row_count, kind, follow_ups }
 
 Also:
     GET  /api/summary   -> headline metrics for the landing page
@@ -51,37 +51,27 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(HERE, "..", ".env"))
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
-GEMMA_API_KEY = os.environ.get("GEMMA_API_KEY", "").strip()
-if GEMMA_API_KEY.upper().startswith("PASTE_"):
-    GEMMA_API_KEY = ""
-GEMMA_BASE_URL = os.environ.get("GEMMA_BASE_URL", "https://poc-aiops.enlight.dev/openai/v1").strip()
-GEMMA_MODEL = os.environ.get("GEMMA_MODEL", "gemma-4-12b")
+GEMMA_BASE_URL = os.environ.get("GEMMA_BASE_URL", "https://34.135.75.215/api/v1").strip()
+GEMMA_MODEL = os.environ.get("GEMMA_MODEL", "Qwen/Qwen2.5-Coder-7B-Instruct")
 # Shared frontend lives at <repo>/Frontend (two levels up from backend/).
 FRONTEND_DIR = os.path.normpath(os.path.join(HERE, "..", "..", "Frontend"))
 
 # --------------------------------------------------------------------------- #
-# Gemma LLM client (lazy — so the server still boots without a key)
+# LLM client (lazy) — self-hosted Qwen endpoint, no API key required
 # --------------------------------------------------------------------------- #
-# The endpoint is an OpenAI-compatible vLLM server behind the enlight.dev gateway.
-# Two non-standard details: auth is a custom "apikey" header (not Authorization:
-# Bearer), and we use /chat/completions. The OpenAI SDK sends Bearer by default,
-# so we inject the real key via default_headers and pass a dummy api_key to satisfy
-# the constructor.
+# OpenAI-compatible vLLM server on a self-signed certificate, so TLS
+# verification is disabled for this client only.
 _llm_client = None
 
 
 def get_llm():
     global _llm_client
-    if not GEMMA_API_KEY:
-        raise RuntimeError(
-            "GEMMA_API_KEY is not set. Add it to RAPDRP/.env to enable NLP-to-SQL."
-        )
     if _llm_client is None:
-        from openai import OpenAI
+        from openai import OpenAI, DefaultHttpxClient
         _llm_client = OpenAI(
             base_url=GEMMA_BASE_URL,
-            api_key="unused",                       # gateway ignores Bearer; see below
-            default_headers={"apikey": GEMMA_API_KEY},
+            api_key="dummy_key",
+            http_client=DefaultHttpxClient(verify=False),
         )
     return _llm_client
 
@@ -287,10 +277,10 @@ def _format_answer(question, preview, cols, rows, kind: str) -> str:
         return _fallback_answer(question, cols, rows, kind)
 
 
-def _suggest_follow_up(question, cols, rows, kind: str, asked) -> str:
-    """One natural next question, specific to THIS result and never already asked."""
+def _suggest_follow_ups(question, cols, rows, kind: str, asked) -> list:
+    """Two natural next questions, specific to THIS result and never already asked."""
     if kind not in ("table", "scalar") or not rows:
-        return ""
+        return []
     already = [a.strip() for a in (asked or []) if a and a.strip()]
     avoid_block = ""
     if already:
@@ -300,14 +290,15 @@ def _suggest_follow_up(question, cols, rows, kind: str, asked) -> str:
         )
     try:
         fu = llm_generate(
-            "You suggest the single most useful NEXT question a BESCOM RAPDRP "
-            "commercial-performance officer would ask, that naturally builds on the "
-            "question just asked and its results. It must be a brand-new angle.\n"
+            "You suggest the two most useful NEXT questions a BESCOM RAPDRP "
+            "commercial-performance officer would ask, that naturally build on the "
+            "question just asked and its results. Each must be a brand-new angle, and "
+            "the two must differ from each other.\n"
             "DOMAIN: RAPDRP is a single-period DCB snapshot. The unit of business is "
             "the electrical INSTALLATION (one metered connection). There is NO "
             "consumer-level detail and NO date/time column, so never suggest trend, "
             "growth, month/year, or over-time questions.\n"
-            "CRITICAL: The ONLY things that exist are the columns listed below. Your "
+            "CRITICAL: The ONLY things that exist are the columns listed below. Each "
             "suggested question MUST be answerable using ONLY these columns — a single "
             "SELECT with filtering/grouping/aggregation. Do NOT propose anything about "
             "targets, forecasts, causes, AT&C losses, transformers, or any concept not "
@@ -318,18 +309,24 @@ def _suggest_follow_up(question, cols, rows, kind: str, asked) -> str:
             "Result columns: " + ", ".join(cols) + "\n"
             "Row count: " + str(len(rows)) + "\n"
             + avoid_block +
-            "\nReply with ONE short follow-up question (max ~12 words), no quotes, no "
-            "preamble. It MUST be answerable using only the AVAILABLE COLUMNS, must "
-            "build on what was just asked, and must differ from every already-asked "
-            "question above.",
-            max_tokens=48,
+            "\nReply with exactly TWO short follow-up questions (max ~12 words each), "
+            "one per line, no numbering, no quotes, no preamble. Each MUST be answerable "
+            "using only the AVAILABLE COLUMNS, must build on what was just asked, and "
+            "must differ from every already-asked question above and from each other.",
+            max_tokens=96,
         )
-        follow_up = fu.strip().strip('"').split("\n")[0][:120]
-        if any(follow_up.lower() == a.lower() for a in already):
-            return ""
-        return follow_up
+        lines = [l.strip().strip('"').lstrip("-•").strip()[:120] for l in fu.strip().split("\n")]
+        out, seen = [], set()
+        for l in lines:
+            if not l or l.lower() in seen or any(l.lower() == a.lower() for a in already):
+                continue
+            seen.add(l.lower())
+            out.append(l)
+            if len(out) == 2:
+                break
+        return out
     except Exception:
-        return ""
+        return []
 
 
 # --------------------------------------------------------------------------- #
@@ -358,7 +355,7 @@ def health():
     return {
         "status": "ok",
         "dataset": DATASET,
-        "llm_configured": bool(GEMMA_API_KEY),
+        "llm_configured": bool(GEMMA_BASE_URL),
         "db_configured": bool(DATABASE_URL),
         "model": GEMMA_MODEL,
         "table": sm.TABLE_LABEL,
@@ -395,10 +392,10 @@ def query(inp: QueryIn):
     if not question:
         return JSONResponse(status_code=400, content={"error": "Empty question."})
 
-    if not GEMMA_API_KEY:
+    if not GEMMA_BASE_URL:
         return JSONResponse(status_code=503, content={
             "kind": "error",
-            "answer": "The Gemma API key isn't configured yet. Add GEMMA_API_KEY "
+            "answer": "The LLM endpoint isn't configured yet. Add GEMMA_BASE_URL "
                       "to RAPDRP/.env and restart the server.",
         })
 
@@ -463,9 +460,9 @@ def query(inp: QueryIn):
     # 5+6) Answer + follow-up depend only on (question, cols, rows) — run together.
     preview = rows[:50]
     fut_answer = _POOL.submit(_format_answer, question, preview, cols, rows, kind)
-    fut_follow = _POOL.submit(_suggest_follow_up, question, cols, rows, kind, inp.asked)
+    fut_follow = _POOL.submit(_suggest_follow_ups, question, cols, rows, kind, inp.asked)
     answer = fut_answer.result()
-    follow_up = fut_follow.result()
+    follow_ups = fut_follow.result()
 
     return {
         "kind": kind,
@@ -474,7 +471,7 @@ def query(inp: QueryIn):
         "columns": cols,
         "rows": rows,
         "row_count": len(rows),
-        "follow_up": follow_up,
+        "follow_ups": follow_ups,
         "attempts": attempted,
     }
 

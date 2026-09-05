@@ -126,6 +126,14 @@ OUTPUT CONTRACT:
   (consumer-level detail, AT&C losses, transformer/feeder data, anything over
   time): output a single line starting with 'REFUSE:' that names the exact reason
   and suggests the closest supported question.
+- If the question is not about BESCOM RAPDRP billing/DCB data at all (general
+  knowledge, other topics, casual conversation, coding help, etc.): output a
+  single line starting with 'REFUSE:' saying the question isn't related to
+  BESCOM data, and invite a question about installations, consumption,
+  collection or arrears instead. Do NOT attempt to answer it.
+- REFUSE/CLARIFY MUST be ONE short sentence, max ~15 words. Never quote the
+  question back, never name internal table/column/view names — plain business
+  language only.
 - Only if a genuine ambiguity remains that the context cannot resolve: output a
   single line starting with 'CLARIFY:' with your clarifying question.
 """
@@ -204,21 +212,19 @@ FEW_SHOTS = [
      f"       ROUND(SUM(gst_tcs_cb)::numeric, 2) AS gst_tcs_outstanding\n"
      f"FROM {TABLE}\nGROUP BY circle\nORDER BY gst_tcs_outstanding DESC"),
 
-    # Refusals — keep declining a legal output.
+    # Refusals — keep declining a legal output. Kept to ONE short sentence.
     ("Show the month-on-month trend of collection efficiency for the last year.",
-     "REFUSE: This table is a single-period snapshot with no date, month or year "
-     "column, so no trend, YoY or MoM analysis is possible. I can instead show "
-     "collection efficiency by zone or circle for this snapshot."),
+     "REFUSE: This is a single-period snapshot, so trends over time aren't possible."),
 
     ("Which individual consumer has the largest outstanding bill?",
-     "REFUSE: The finest grain is (section, rate_schedule_code) — there are no "
-     "consumer-level or RR-number records here. I can show the subdivisions with "
-     "the highest closing arrears instead."),
+     "REFUSE: There's no consumer-level detail here — try the subdivision with the highest arrears."),
 
     ("What are the AT&C losses and transformer failure rates by division?",
-     "REFUSE: Transformer-failure data isn't in this table, and AT&C loss needs "
-     "input energy (units purchased), which is also absent. I can compute billing "
-     "efficiency and collection efficiency by division from what's here."),
+     "REFUSE: Transformer and AT&C loss data isn't available in RAPDRP."),
+
+    # Off-topic — not about BESCOM data at all. Refuse instead of answering.
+    ("What's the capital of France?",
+     "REFUSE: That's not related to BESCOM data — ask about installations, consumption, or collection instead."),
 ]
 
 

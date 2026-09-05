@@ -108,6 +108,14 @@ OUTPUT CONTRACT:
 - FOLLOW-UPS: resolve pronouns/back-references from a CONVERSATION SO FAR block if present.
 - If the question needs a column not in this view or over-time data: output a single
   line starting with 'REFUSE:' naming the reason and the closest supported question.
+- If the question is not about BESCOM billing/DCB data at all (general knowledge,
+  other topics, casual conversation, coding help, etc.): output a single line
+  starting with 'REFUSE:' saying the question isn't related to BESCOM data, and
+  invite a question about installations, consumption, collection or arrears
+  instead. Do NOT attempt to answer it.
+- REFUSE/CLARIFY MUST be ONE short sentence, max ~15 words. Never quote the
+  question back, never name internal table/column/view names — plain business
+  language only.
 - Only for a genuine unresolved ambiguity: output a single line 'CLARIFY:' ...
 """
 
@@ -165,11 +173,13 @@ FEW_SHOTS = [
      f"SELECT SUM(active_installations) AS active_installations\n"
      f"FROM {TABLE}\nWHERE UPPER(circle) = UPPER('Kolar')"),
 
-    # Refusal — keep declining a legal output.
+    # Refusal — keep declining a legal output. Kept to ONE short sentence.
     ("Show the month-on-month trend of collection.",
-     "REFUSE: This is a single-period snapshot with no date/month/year column, so no "
-     "trend, YoY or MoM analysis is possible. I can show collection by zone, circle or "
-     "dataset for this snapshot instead."),
+     "REFUSE: This is a single-period snapshot, so trends over time aren't possible."),
+
+    # Off-topic — not about BESCOM data at all. Refuse instead of answering.
+    ("What's the capital of France?",
+     "REFUSE: That's not related to BESCOM data — ask about installations, consumption, or collection instead."),
 ]
 
 

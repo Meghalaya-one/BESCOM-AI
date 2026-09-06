@@ -50,7 +50,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(HERE, "..", ".env"))
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
-GEMMA_BASE_URL = os.environ.get("GEMMA_BASE_URL", "https://34.135.75.215/api/v1").strip()
+GEMMA_BASE_URL = os.environ.get("GEMMA_BASE_URL", "https://34.135.238.92/api/v1").strip()
 GEMMA_MODEL = os.environ.get("GEMMA_MODEL", "Qwen/Qwen2.5-Coder-7B-Instruct")
 
 # Output budget for NL->SQL generation (and its recovery retry). Reasoning models
